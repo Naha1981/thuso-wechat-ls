@@ -1,89 +1,60 @@
-# Naha SuperApp Backend v1.8 — Merchant Operating System
+# THUSO Platform
 
-## Purpose
+> **Ask THUSO. Get it done.**
 
-v1.8 completes the merchant side of the first WhatsApp commerce vertical slice: merchants can receive, inspect, accept, prepare, mark ready, complete/cancel orders, manage menu inventory, see sales, and trigger delivery dispatch for paid delivery orders.
+**Current release: v2.15 — Food + Delivery Customer Experience**
 
-## Merchant WhatsApp commands
+THUSO is a WhatsApp-first consumer platform. WhatsApp is the interface; the Naha backend provides identity, commerce, payments, merchants, dispatch, delivery, media, memory and agent orchestration.
 
-```text
-ORDERS
-ORDER <order_id>
-ACCEPT ORDER <order_id>
-REJECT ORDER <order_id> <reason>
-PREPARING <order_id>
-READY ORDER <order_id>
-COMPLETE ORDER <order_id>
-CANCEL ORDER <order_id> <reason>
-MENU
-ADD ITEM <name> <price>
-STOCK <product_id> <quantity>
-EARNINGS
-```
+## First production vertical: Food + Delivery
 
-Merchant commands are evaluated before customer commerce commands for authenticated food merchants, preventing `MENU` from being interpreted as customer discovery when the sender is a merchant.
+The customer journey is:
 
-## Order state machine
+`FOOD` → discover merchants → `MENU <merchant_id>` → `ADD <product_id> <quantity>` → `CART` → share location → `CHECKOUT` → payment → merchant preparation → courier dispatch → live delivery state → proof/confirmation.
+
+The existing v2.14 commerce, merchant, dispatch, delivery and payment primitives remain the transactional foundation. v2.15 adds the customer-facing Food API and persistent delivery location/timeline primitives.
+
+## Customer API
 
 ```text
-pending_payment -> paid -> preparing -> ready -> completed
-                         |         |          |
-                         +------> cancelled <+
-
-ready -> out_for_delivery -> completed
-```
-
-A paid delivery order becomes `out_for_delivery` only after the merchant marks it `ready`, a merchant pickup location is available, and a delivery service request is created. Provider dispatch uses the existing deterministic dispatch engine.
-
-## Security boundaries
-
-- Merchant identity is resolved from the verified WhatsApp phone mapping, not from a user-supplied merchant ID in the WhatsApp flow.
-- Merchant API routes remain behind the authenticated-session/internal boundary used by the current backend until a full provider JWT/session gateway is introduced.
-- Order mutations are performed under row locks and validated against the merchant owner of the order.
-- State transitions are explicit and fail closed.
-- Customer notifications are delivered through the transactional channel outbox rather than synchronously from the request handler.
-- Payment state is not changed by merchant commands.
-- Financial settlement remains in the payment/ledger subsystem.
-
-## APIs
-
-```text
-GET  /api/v1/merchants/{merchant_id}/orders
-GET  /api/v1/merchants/{merchant_id}/orders/{order_id}
-POST /api/v1/merchants/{merchant_id}/orders/{order_id}/{action}
-GET  /api/v1/merchants/{merchant_id}/menu
-POST /api/v1/merchants/{merchant_id}/menu/items
-PATCH /api/v1/merchants/{merchant_id}/menu/items/{product_id}/stock
-GET  /api/v1/merchants/{merchant_id}/sales
+GET   /api/v1/food/feed
+GET   /api/v1/food/merchants/{merchant_id}/menu
+GET   /api/v1/food/location
+PUT   /api/v1/food/location
+PATCH /api/v1/food/cart/items
+GET   /api/v1/food/orders
+GET   /api/v1/food/orders/{order_id}/timeline
+POST  /api/v1/food/orders/{order_id}/cancel
 ```
 
 ## Database
 
-Migration:
+Apply:
 
 ```text
-018_merchant_os.sql
+supabase/migrations/034_food_delivery_experience.sql
 ```
 
-Adds merchant order lifecycle timestamps, delivery request linkage, merchant action deduplication and merchant audit events.
+This adds customer delivery locations and indexes the commerce/delivery event streams for chronological order tracking.
 
-## Delivery integration
+## WhatsApp
 
-When a paid delivery order reaches `ready`:
+The existing WhatsApp commerce flow remains available:
 
-1. Naha reads the merchant pickup coordinates.
-2. Creates a `delivery` service request linked to the commerce order.
-3. Dispatches the request through Dispatch 2.0.
-4. Stores the delivery request ID on the order.
-5. Moves the order to `out_for_delivery`.
-6. Notifies the customer through the WhatsApp outbox.
+```text
+FOOD / MENU
+MENU <merchant_id>
+ADD <product_id> <quantity>
+CART
+CHECKOUT
+```
 
-Provider acceptance and delivery completion continue through the existing provider operating system.
+Location messages are already parsed by WhatsApp ingress and can be used by the Food experience layer. Payment and delivery notifications continue through the durable outbox.
 
 ## Verification
 
 ```text
-37 passed
+67 passed
 ```
 
-This version is unit-tested in the local environment. Live Supabase, WhatsApp, payment-provider and production Redis integration tests still require real environment credentials/infrastructure.
+Python compilation checks pass for the new Food API/service and application entrypoint. Live Supabase, Redis, WhatsApp and payment-provider integration tests still require production-like infrastructure and credentials.
