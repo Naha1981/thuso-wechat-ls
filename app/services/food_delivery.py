@@ -88,7 +88,7 @@ async def order_timeline(db: AsyncSession, user_id: UUID, order_id: UUID):
 async def cancel_customer_order(db: AsyncSession, user_id: UUID, order_id: UUID, reason: str = 'Cancelled by customer'):
     row = (await db.execute(text("""
         update commerce_orders set status='cancelled',rejection_reason=:reason,updated_at=now()
-        where id=:oid and user_id=:uid and status in ('pending_payment','paid','preparing') returning *
+        where id=:oid and user_id=:uid and status='pending_payment' returning *
     """), {'oid': order_id, 'uid': user_id, 'reason': reason[:500]})).mappings().first()
     if not row:
         raise FoodDeliveryError('order cannot be cancelled at its current status')

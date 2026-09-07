@@ -24,7 +24,7 @@ PUT   /api/v1/food/location
 PATCH /api/v1/food/cart/items
 GET   /api/v1/food/orders
 GET   /api/v1/food/orders/{order_id}/timeline
-POST  /api/v1/food/orders/{order_id}/cancel
+POST  /api/v1/food/orders/{order_id}/cancel  # pending-payment orders
 ```
 
 ## Database

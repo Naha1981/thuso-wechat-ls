@@ -19,3 +19,10 @@ def test_customer_food_service_exists():
     source = Path("app/services/food_delivery.py").read_text()
     for name in ("save_customer_location", "customer_orders", "order_timeline", "cancel_customer_order"):
         assert f"async def {name}" in source
+
+
+
+def test_customer_cancel_is_payment_safe():
+    source = Path("app/services/food_delivery.py").read_text()
+    assert "and status='pending_payment' returning *" in source
+    assert "and status in ('pending_payment','paid','preparing')" not in source
