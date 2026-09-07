@@ -12,6 +12,7 @@ from app.api.financial import router as financial_router
 from app.api.payment_providers import router as payment_provider_router
 from app.api.payment_provider_webhooks import router as payment_webhook_router
 from app.api.payment_routing import router as payment_routing_router
+from app.api.payment_methods import router as payment_methods_router
 from app.api.payment_orchestration import router as payment_orchestration_router
 from app.api.settlement import router as settlement_router
 from app.api.reconciliation import router as reconciliation_router
@@ -29,7 +30,7 @@ from app.api.whatsapp_ops import router as whatsapp_ops_router
 from app.core.startup import validate_startup_configuration
 
 settings=get_settings()
-app=FastAPI(title="Naha SuperApp Platform API", version="2.16.0")
+app=FastAPI(title="THUSO Platform API", version="2.17.0")
 
 @app.on_event("startup")
 async def startup_validation():
@@ -45,6 +46,7 @@ app.include_router(realtime_router, prefix=settings.api_prefix)
 app.include_router(payment_provider_router)
 app.include_router(payment_webhook_router)
 app.include_router(payment_routing_router, prefix=settings.api_prefix)
+app.include_router(payment_methods_router, prefix=settings.api_prefix)
 app.include_router(financial_router, prefix=settings.api_prefix)
 app.include_router(payment_orchestration_router, prefix=settings.api_prefix)
 app.include_router(settlement_router, prefix=settings.api_prefix)
@@ -62,4 +64,4 @@ app.include_router(whatsapp_identity_router, prefix=settings.api_prefix)
 app.include_router(whatsapp_ops_router, prefix=settings.api_prefix)
 
 @app.get("/healthz")
-async def healthz(): return {"status":"ok","service":settings.app_name,"version":"2.16.0"}
+async def healthz(): return {"status":"ok","service":settings.app_name,"version":"2.17.0"}
