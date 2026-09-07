@@ -27,7 +27,7 @@ v2.15 turns the existing commerce, payments, merchant, dispatch, delivery and Wh
 - `PATCH /api/v1/food/cart/items`
 - `GET /api/v1/food/orders`
 - `GET /api/v1/food/orders/{order_id}/timeline`
-- `POST /api/v1/food/orders/{order_id}/cancel` (pending-payment orders only)
+- `POST /api/v1/food/orders/{order_id}/cancel`
 
 The existing commerce checkout remains the transactional order/payment boundary; the new Food API is the consumer-facing experience layer around it.
 

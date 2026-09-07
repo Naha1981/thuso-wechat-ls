@@ -29,7 +29,7 @@ from app.api.whatsapp_ops import router as whatsapp_ops_router
 from app.core.startup import validate_startup_configuration
 
 settings=get_settings()
-app=FastAPI(title="Naha SuperApp Platform API", version="2.15.0")
+app=FastAPI(title="Naha SuperApp Platform API", version="2.16.0")
 
 @app.on_event("startup")
 async def startup_validation():
@@ -62,4 +62,4 @@ app.include_router(whatsapp_identity_router, prefix=settings.api_prefix)
 app.include_router(whatsapp_ops_router, prefix=settings.api_prefix)
 
 @app.get("/healthz")
-async def healthz(): return {"status":"ok","service":settings.app_name,"version":"2.15.0"}
+async def healthz(): return {"status":"ok","service":settings.app_name,"version":"2.16.0"}

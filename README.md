@@ -2,7 +2,7 @@
 
 > **Ask THUSO. Get it done.**
 
-**Current release: v2.15 — Food + Delivery Customer Experience**
+**Current release: v2.16 — Food + Delivery Customer Experience**
 
 THUSO is a WhatsApp-first consumer platform. WhatsApp is the interface; the Naha backend provides identity, commerce, payments, merchants, dispatch, delivery, media, memory and agent orchestration.
 
@@ -22,6 +22,7 @@ GET   /api/v1/food/merchants/{merchant_id}/menu
 GET   /api/v1/food/location
 PUT   /api/v1/food/location
 PATCH /api/v1/food/cart/items
+POST  /api/v1/food/checkout
 GET   /api/v1/food/orders
 GET   /api/v1/food/orders/{order_id}/timeline
 POST  /api/v1/food/orders/{order_id}/cancel  # pending-payment orders
@@ -49,12 +50,25 @@ CART
 CHECKOUT
 ```
 
-Location messages are already parsed by WhatsApp ingress and can be used by the Food experience layer. Payment and delivery notifications continue through the durable outbox.
+Payment and delivery notifications continue through the durable outbox.
+
+## Customer web
+
+`web/` is a deliberately lightweight Next.js companion surface. It is not intended to replace WhatsApp. It provides a browser fallback for discovery, menu browsing, cart and order visibility while keeping the primary transaction APIs shared with WhatsApp.
+
+## Lesotho product principles
+
+- LSL-first pricing and local payment orchestration.
+- WhatsApp-first interaction with a low-data web fallback.
+- Location is explicit before delivery checkout.
+- No map SDK or image-heavy dependency is required for the core food flow.
+- Payment-provider credentials remain server-side.
+- Design for inexpensive Android devices and intermittent connectivity.
 
 ## Verification
 
 ```text
-67 passed
+70 passed
 ```
 
-Python compilation checks pass for the new Food API/service and application entrypoint. Live Supabase, Redis, WhatsApp and payment-provider integration tests still require production-like infrastructure and credentials.
+Python compilation checks pass. Live Supabase, Redis, WhatsApp and payment-provider integration tests still require production-like infrastructure and credentials.
