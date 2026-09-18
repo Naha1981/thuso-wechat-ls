@@ -32,6 +32,7 @@ export default function PartnerOnboardPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [testOperation, setTestOperation] = useState('');
 
   useEffect(() => {
     const fragment = window.location.hash.replace(/^#/, '');
@@ -62,6 +63,8 @@ export default function PartnerOnboardPage() {
             request_defaults: JSON.stringify(data.integration.request_defaults || {}, null, 2),
             response_mappings: JSON.stringify(data.integration.response_mappings || {}, null, 2),
           }));
+          const ops = Object.keys(data.integration.operation_configs || {});
+          setTestOperation(ops[0] || '');
         }
       } catch (e) { setError(e.message); }
     })();
@@ -92,7 +95,9 @@ export default function PartnerOnboardPage() {
     try {
       const data = await call('/partner/discover', token, {method:'POST', body: JSON.stringify({openapi_url: form.api_spec_url})});
       update('operation_configs', JSON.stringify(data.operations || {}, null, 2));
-      setMessage((Object.keys(data.operations || {}).length) + ' API operations discovered.');
+      const ops = Object.keys(data.operations || {});
+      setTestOperation(ops[0] || '');
+      setMessage(ops.length + ' API operations discovered.');
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   }
@@ -147,6 +152,10 @@ export default function PartnerOnboardPage() {
     <section className="adminCard" style={{marginTop:16}}>
       <div className="cardHead"><div><h2>2. API contract</h2><p>Import your OpenAPI file, or paste the operation contract supplied by your team.</p></div><button className="secondaryBtn" disabled={!form.api_spec_url || busy} onClick={discover}>Discover API operations</button></div>
       <label>Operation configuration<textarea rows="12" spellCheck="false" value={form.operation_configs} onChange={e=>update('operation_configs',e.target.value)} /></label>
+      <label>Production test operation<select value={testOperation} onChange={e=>setTestOperation(e.target.value)}>
+        <option value="">Health check only (cannot activate production)</option>
+        {(() => { try { return Object.keys(JSON.parse(form.operation_configs || '{}')).map(name => <option key={name} value={name}>{name}</option>); } catch (_) { return null; } })()}
+      </select></label>
       <label>Request defaults<textarea rows="5" spellCheck="false" value={form.request_defaults} onChange={e=>update('request_defaults',e.target.value)} /></label>
       <label>Response mappings<textarea rows="6" spellCheck="false" value={form.response_mappings} onChange={e=>update('response_mappings',e.target.value)} /></label>
     </section>
