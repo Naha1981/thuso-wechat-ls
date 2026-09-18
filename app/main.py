@@ -36,7 +36,7 @@ from app.api.admin import router as admin_router
 from app.core.startup import validate_startup_configuration
 
 settings=get_settings()
-app=FastAPI(title="THUSO Platform API", version="2.19.0")
+app=FastAPI(title="THUSO Platform API", version="2.20.0")
 
 origins=[x.strip() for x in settings.cors_allowed_origins.split(",") if x.strip()]
 if origins:
@@ -80,4 +80,4 @@ app.include_router(whatsapp_identity_router, prefix=settings.api_prefix)
 app.include_router(whatsapp_ops_router, prefix=settings.api_prefix)
 
 @app.get("/healthz")
-async def healthz(): return {"status":"ok","service":settings.app_name,"version":"2.19.0"}
+async def healthz(): return {"status":"ok","service":settings.app_name,"version":"2.20.0"}
