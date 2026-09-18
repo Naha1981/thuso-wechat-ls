@@ -18,12 +18,21 @@ class DatabaseHTTPServiceProvider:
         config = await load_active_partner(self.db, service_domain=request.domain, provider_key=request.provider_key)
         if not config:
             raise LookupError(f"no active partner integration for {request.domain}")
-        data, observed = await execute_partner(
-            config,
-            operation=request.operation,
-            trace_id=str(request.trace_id),
-            payload=request.payload,
-        )
+        if request.operation.startswith("workflow:"):
+            from app.services.partner_integrations import execute_workflow
+            data, observed = await execute_workflow(
+                config,
+                workflow_name=request.operation.split(":", 1)[1],
+                trace_id=str(request.trace_id),
+                payload=request.payload,
+            )
+        else:
+            data, observed = await execute_partner(
+                config,
+                operation=request.operation,
+                trace_id=str(request.trace_id),
+                payload=request.payload,
+            )
         return ServiceResult(
             provider=config.provider_key,
             status="executed",
