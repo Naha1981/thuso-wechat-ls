@@ -93,3 +93,29 @@ The intended user experience is conversational:
 `order food` → `request a ride` → `send groceries to family` → `buy airtime` → `check a loan workflow` → `file a tax/service request`.
 
 NahaOS decides which safe workflow and service adapter to invoke. External providers remain behind integration boundaries and must be supplied with approved contracts/credentials before production execution is enabled.
+
+
+## Stakeholder self-onboarding
+
+NahaOS now has a generic Partner Integration Hub. A platform administrator creates a short-lived secure onboarding link for a stakeholder. The stakeholder opens the link and can:
+
+1. enter its API base URL and credentials;
+2. optionally import an OpenAPI JSON document to discover operations;
+3. map request/response fields;
+4. run a live connectivity test;
+5. activate production.
+
+Changing a contract automatically disables the live integration until the new configuration passes a fresh test. Secrets are encrypted server-side. External integrations remain configuration-driven; provider-specific API changes do not require NahaLabs source-code changes.
+
+## Rural + low-connectivity operation
+
+NahaOS is designed for unreliable connectivity:
+
+- Web is installable as a lightweight PWA shell.
+- Frequently visited pages can be cached locally.
+- An IndexedDB outbox can store approved, idempotent requests while offline and retry them when connectivity returns.
+- The user sees a clear online/offline state and queued-work count.
+- WhatsApp and USSD remain channel options for people who cannot use the web app reliably.
+- Critical financial, identity and other consequential actions are never silently treated as completed while offline; they remain queued/pending until the server confirms execution.
+
+Offline mode is therefore **store-and-forward**, not fake disconnected execution.
