@@ -45,6 +45,7 @@ create table if not exists public.integration_configs (
   secret_ciphertext text,
   last_test_at timestamptz,
   last_test_status varchar(30),
+  last_test_kind varchar(30),
   last_test_error text,
   version integer not null default 1,
   allow_private_network boolean not null default false,
