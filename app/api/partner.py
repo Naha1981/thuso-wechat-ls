@@ -83,10 +83,10 @@ async def _saved(db: AsyncSession, invite_id: str):
         await db.execute(
             text("""
                 select id, stakeholder_name, stakeholder_type, service_domain,
-                       provider_key, environment, enabled, allow_private_network, base_url, api_spec_url,
-                       health_endpoint_path, auth_scheme, auth_header_name,
+                       provider_key, environment, enabled, allow_private_network, adapter_type, base_url, api_spec_url,
+                       health_endpoint_path, auth_scheme, auth_header_name, auth_config,
                        timeout_seconds, request_defaults, operation_configs,
-                       response_mappings, secret_ciphertext,
+                       response_mappings, webhook_config, workflow_configs, secret_ciphertext,
                        last_test_status, last_test_operation
                 from partner_integrations
                 where partner_invite_id=:invite_id
@@ -232,8 +232,8 @@ async def save(
                 insert into partner_integrations(
                   partner_invite_id, stakeholder_name, stakeholder_type, service_domain,
                   provider_key, adapter_type, environment, enabled, base_url, api_spec_url,
-                  health_endpoint_path, allow_private_network, auth_scheme, auth_header_name, timeout_seconds,
-                  request_defaults, operation_configs, response_mappings, secret_ciphertext
+                  health_endpoint_path, allow_private_network, auth_scheme, auth_header_name, auth_config, timeout_seconds,
+                  request_defaults, operation_configs, response_mappings, webhook_config, workflow_configs, secret_ciphertext
                 ) values (
                   :invite_id, :name, :type, :domain, :provider_key, :adapter_type, 'production', false,
                   :base_url, :api_spec_url, :health_endpoint_path, :allow_private_network, :auth_scheme,
