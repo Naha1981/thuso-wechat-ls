@@ -37,6 +37,11 @@ class IntegrationIn(BaseModel):
     timeout_seconds: int = Field(default=30, ge=5, le=180)
     api_key: str | None = Field(default=None, max_length=10000)
     api_secret: str | None = Field(default=None, max_length=10000)
+    hmac_secret: str | None = Field(default=None, max_length=10000)
+    client_secret: str | None = Field(default=None, max_length=10000)
+    client_cert_pem: str | None = Field(default=None, max_length=50000)
+    client_key_pem: str | None = Field(default=None, max_length=50000)
+    ca_bundle_pem: str | None = Field(default=None, max_length=50000)
     extra_headers: dict[str, str] | None = None
     allow_private_network: bool = False
     request_defaults: dict = Field(default_factory=dict)
@@ -174,10 +179,28 @@ async def save(
     if body.auth_scheme != "custom":
         secrets_map.pop("extra_headers", None)
     if body.auth_scheme == "none":
-        secrets_map.pop("api_key", None)
-        secrets_map.pop("api_secret", None)
+        for key in ("api_key", "api_secret", "hmac_secret", "client_secret", "client_cert_pem", "client_key_pem", "ca_bundle_pem"):
+            secrets_map.pop(key, None)
     if body.auth_scheme in {"bearer", "api-key"}:
         secrets_map.pop("api_secret", None)
+        secrets_map.pop("hmac_secret", None)
+        secrets_map.pop("client_secret", None)
+        secrets_map.pop("client_cert_pem", None)
+        secrets_map.pop("client_key_pem", None)
+        secrets_map.pop("ca_bundle_pem", None)
+    if body.auth_scheme == "hmac_sha256":
+        secrets_map.pop("api_key", None)
+        secrets_map.pop("api_secret", None)
+        secrets_map.pop("client_secret", None)
+    if body.auth_scheme == "oauth2_client_credentials":
+        secrets_map.pop("api_key", None)
+        secrets_map.pop("api_secret", None)
+        secrets_map.pop("hmac_secret", None)
+    if body.auth_scheme == "mtls":
+        secrets_map.pop("api_key", None)
+        secrets_map.pop("api_secret", None)
+        secrets_map.pop("hmac_secret", None)
+        secrets_map.pop("client_secret", None)
 
     ciphertext = SecretCipher(get_settings().secrets_encryption_key).encrypt(
         json.dumps(secrets_map, separators=(",", ":"))
@@ -237,7 +260,7 @@ async def save(
                 ) values (
                   :invite_id, :name, :type, :domain, :provider_key, :adapter_type, 'production', false,
                   :base_url, :api_spec_url, :health_endpoint_path, :allow_private_network, :auth_scheme,
-                  :auth_header_name, :timeout_seconds, cast(:request_defaults as jsonb),
+                  :auth_header_name, cast(:auth_config as jsonb), :timeout_seconds, cast(:request_defaults as jsonb),
                   cast(:operation_configs as jsonb), cast(:response_mappings as jsonb),
                   cast(:webhook_config as jsonb), cast(:workflow_configs as jsonb),
                   :secret_ciphertext
