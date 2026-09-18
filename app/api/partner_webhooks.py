@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
@@ -22,7 +22,7 @@ async def receive_webhook(
     provider_key: str,
     operation: str,
     request: Request,
-    db: AsyncSession = __import__("fastapi").Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     config = await load_active_partner_by_provider_key(db, provider_key=provider_key)
     if not config:
