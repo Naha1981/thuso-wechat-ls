@@ -111,6 +111,10 @@ async def _saved(db: AsyncSession, invite_id: str):
 def _public(config, secrets_map):
     if not config:
         return {"configured": False, "enabled": False, "secret_configured": False}
+    safe_auth_config = {
+        key: value for key, value in (config.auth_config or {}).items()
+        if key in {"header_name", "token_url", "client_id", "scope", "timestamp_header", "signature_header", "signature_prefix"}
+    }
     return {
         "configured": True,
         "stakeholder_name": config.stakeholder_name,
@@ -125,7 +129,7 @@ def _public(config, secrets_map):
         "api_spec_url": config.api_spec_url,
         "health_endpoint_path": config.health_endpoint_path,
         "auth_scheme": config.auth_scheme,
-        "auth_config": config.auth_config,
+        "auth_config": safe_auth_config,
         "timeout_seconds": config.timeout_seconds,
         "request_defaults": config.request_defaults,
         "operation_configs": config.operation_configs,
