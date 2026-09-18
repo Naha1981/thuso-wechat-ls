@@ -42,6 +42,10 @@ class IntegrationIn(BaseModel):
     client_cert_pem: str | None = Field(default=None, max_length=50000)
     client_key_pem: str | None = Field(default=None, max_length=50000)
     ca_bundle_pem: str | None = Field(default=None, max_length=50000)
+    sftp_username: str | None = Field(default=None, max_length=320)
+    sftp_password: str | None = Field(default=None, max_length=10000)
+    sftp_private_key_pem: str | None = Field(default=None, max_length=50000)
+    sftp_known_hosts: str | None = Field(default=None, max_length=50000)
     extra_headers: dict[str, str] | None = None
     allow_private_network: bool = False
     request_defaults: dict = Field(default_factory=dict)
@@ -161,9 +165,9 @@ async def save(
     db: AsyncSession = Depends(get_db),
 ):
     invite = await _invite(db, x_nahaos_onboarding_token)
-    if body.adapter_type not in {"rest_json", "graphql", "form_urlencoded", "soap_xml"}:
+    if body.adapter_type not in {"rest_json", "graphql", "form_urlencoded", "soap_xml", "sftp_file"}:
         raise HTTPException(422, "Unsupported adapter type")
-    if body.auth_scheme not in {"bearer", "api-key", "basic", "custom", "none", "oauth2_client_credentials", "hmac_sha256", "mtls"}:
+    if body.auth_scheme not in {"bearer", "api-key", "basic", "custom", "none", "oauth2_client_credentials", "hmac_sha256", "mtls", "sftp_password", "sftp_private_key"}:
         raise HTTPException(422, "Unsupported auth scheme")
     validate_endpoint(body.base_url, body.allow_private_network)
     normalise_path(body.health_endpoint_path, None)
@@ -183,7 +187,7 @@ async def save(
     if body.auth_scheme != "custom":
         secrets_map.pop("extra_headers", None)
     if body.auth_scheme == "none":
-        for key in ("api_key", "api_secret", "hmac_secret", "client_secret", "client_cert_pem", "client_key_pem", "ca_bundle_pem"):
+        for key in ("api_key", "api_secret", "hmac_secret", "client_secret", "client_cert_pem", "client_key_pem", "ca_bundle_pem", "sftp_username", "sftp_password", "sftp_private_key_pem", "sftp_known_hosts"):
             secrets_map.pop(key, None)
     if body.auth_scheme in {"bearer", "api-key"}:
         secrets_map.pop("api_secret", None)
@@ -205,6 +209,11 @@ async def save(
         secrets_map.pop("api_secret", None)
         secrets_map.pop("hmac_secret", None)
         secrets_map.pop("client_secret", None)
+    if body.auth_scheme in {"bearer", "api-key", "basic", "custom", "none", "oauth2_client_credentials", "hmac_sha256", "mtls"}:
+        secrets_map.pop("sftp_username", None)
+        secrets_map.pop("sftp_password", None)
+        secrets_map.pop("sftp_private_key_pem", None)
+        secrets_map.pop("sftp_known_hosts", None)
 
     ciphertext = SecretCipher(get_settings().secrets_encryption_key).encrypt(
         json.dumps(secrets_map, separators=(",", ":"))
