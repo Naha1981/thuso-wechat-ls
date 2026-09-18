@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hmac
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -197,7 +197,7 @@ async def login(
     if not row:
         raise HTTPException(401, "Invalid credentials")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if row["locked_until"] and row["locked_until"] > now:
         raise HTTPException(423, "Admin account temporarily locked")
 
