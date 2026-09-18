@@ -459,10 +459,6 @@ class SFTPFileAdapter:
         result = await __import__("asyncio").to_thread(transfer)
         return AdapterResponse(200, {}, result, json.dumps(result))
 
-def adapter_for(adapter_type: str) -> PartnerAdapter:
-    return ADAPTERS.get(adapter_type)
-
-
 class AdapterRegistry:
     def __init__(self) -> None:
         self._adapters: dict[str, PartnerAdapter] = {
