@@ -5,7 +5,7 @@ import hashlib
 import hmac
 import os
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import text
@@ -59,7 +59,7 @@ def _password_verify(password: str, encoded: str) -> bool:
             digest,
             base64.urlsafe_b64decode(digest_b64.encode("ascii")),
         )
-    except Exception:
+    except (TypeError, ValueError):
         return False
 
 
@@ -86,7 +86,7 @@ async def create_admin_session(
     settings = get_settings()
     token = secrets.token_urlsafe(48)
     csrf = secrets.token_urlsafe(32)
-    expires = datetime.now(timezone.utc) + timedelta(hours=settings.admin_session_ttl_hours)
+    expires = datetime.now(UTC) + timedelta(hours=settings.admin_session_ttl_hours)
 
     await db.execute(
         text(
