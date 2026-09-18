@@ -17,8 +17,8 @@ Invite → Connect → Discover → Map → Test → Activate
    - optional OpenAPI JSON URL
 4. NahaOS can import the OpenAPI document and create an initial operation catalogue.
 5. The stakeholder confirms request templates and response mappings.
-6. NahaOS executes a live connectivity test against the real endpoint.
-7. Only a tested configuration can be activated.
+6. NahaOS executes a live test against at least one real service operation. A health check can be used for diagnostics but is not enough for production activation.
+7. Only a configuration with a passed service-operation test can be activated.
 8. Activation routes future requests for that service domain through the configured provider.
 9. Editing an active configuration automatically disables it until the new configuration passes a fresh test.
 
