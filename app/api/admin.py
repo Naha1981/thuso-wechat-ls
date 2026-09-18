@@ -126,6 +126,7 @@ def _public_config(config, secrets: dict) -> dict:
         "secret_configured": bool(secrets),
         "last_test_at": config.last_test_at,
         "last_test_status": config.last_test_status,
+        "last_test_kind": config.last_test_kind,
     }
 
 
@@ -317,9 +318,9 @@ async def test_econet(
         result = await test_econet_config(config, smoke_chat=body.smoke_chat)
         await db.execute(
             text(
-                "update integration_configs set last_test_at=now(), last_test_status='passed', last_test_error=null where id=:id"
+                "update integration_configs set last_test_at=now(), last_test_status='passed', last_test_kind=:kind, last_test_error=null where id=:id"
             ),
-            {"id": config.id},
+            {"id": config.id, "kind": result["kind"]},
         )
         await _audit(
             db,
@@ -336,7 +337,7 @@ async def test_econet(
             text(
                 "update integration_configs set last_test_at=now(), last_test_status='failed', last_test_error=:error where id=:id"
             ),
-            {"id": config.id, "error": str(exc)[:500]},
+            {"id": config.id, "kind": "chat" if body.smoke_chat else "health", "error": str(exc)[:500]},
         )
         await db.commit()
         raise HTTPException(502, "Econet integration test failed") from exc
@@ -347,8 +348,8 @@ async def activate_econet(admin=Depends(require_admin_write), db: AsyncSession =
     config, _ = await get_saved_econet_config(db)
     if not config:
         raise HTTPException(404, "Econet integration has not been configured")
-    if config.last_test_status != "passed":
-        raise HTTPException(409, "Run and pass a connectivity test before activation")
+    if config.last_test_status != "passed" or config.last_test_kind != "chat":
+        raise HTTPException(409, "Run and pass an AI request test before activation")
 
     await db.execute(
         text(
