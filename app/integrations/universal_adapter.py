@@ -431,7 +431,10 @@ class SFTPFileAdapter:
             import io
 
             client = paramiko.SSHClient()
-            client.load_host_keys(io.StringIO(str(known_hosts)))
+            known_hosts_file = tempfile.NamedTemporaryFile(mode="w", suffix=".known_hosts", delete=False)
+            known_hosts_file.write(str(known_hosts))
+            known_hosts_file.close()
+            client.load_host_keys(known_hosts_file.name)
             client.set_missing_host_key_policy(paramiko.RejectPolicy())
             if private_key_pem:
                 pkey = None
@@ -475,6 +478,10 @@ class SFTPFileAdapter:
                         raise RuntimeError(f"Unsupported SFTP action: {action}")
             finally:
                 client.close()
+                try:
+                    os.unlink(known_hosts_file.name)
+                except FileNotFoundError:
+                    pass
             return data
 
         result = await __import__("asyncio").to_thread(transfer)
