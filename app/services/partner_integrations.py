@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import ipaddress
 import json
@@ -209,6 +210,7 @@ async def test_partner(config: PartnerIntegration, operation: str | None = None)
 
 
 async def execute_partner(config: PartnerIntegration, *, operation: str, trace_id: str, payload: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    validate_endpoint(config.base_url, config.allow_private_network)
     definition = config.operation_configs.get(operation)
     if not isinstance(definition, dict):
         raise RuntimeError(f"Partner operation not configured: {operation}")
@@ -218,9 +220,30 @@ async def execute_partner(config: PartnerIntegration, *, operation: str, trace_i
         raise RuntimeError("Partner operation path is required")
     variables = {"trace_id": trace_id, "operation": operation, "payload": payload}
     body = render({**config.request_defaults, **(definition.get("request_template") or {})}, variables)
-    headers = {"Accept": "application/json", "X-NahaOS-Trace-Id": trace_id, **auth_headers(config)}
+    headers = {
+        "Accept": "application/json",
+        "X-NahaOS-Trace-Id": trace_id,
+        "X-NahaOS-Idempotency-Key": trace_id,
+        **auth_headers(config),
+    }
     async with httpx.AsyncClient(timeout=config.timeout_seconds, follow_redirects=False) as client:
-        response = await client.request(method, f"{config.base_url}{path}", json=body if method != "GET" else None, headers=headers)
+        for attempt in range(3):
+            try:
+                response = await client.request(
+                    method,
+                    f"{config.base_url}{path}",
+                    json=body if method != "GET" else None,
+                    headers=headers,
+                )
+            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
+                if attempt == 2:
+                    raise RuntimeError("Unable to connect to partner API")
+                await asyncio.sleep(0.25 * (2 ** attempt))
+                continue
+            if response.status_code in {429, 502, 503, 504} and attempt < 2:
+                await asyncio.sleep(0.25 * (2 ** attempt))
+                continue
+            break
     if response.status_code >= 400:
         raise RuntimeError(f"Partner API returned HTTP {response.status_code}")
     data = response.json()
