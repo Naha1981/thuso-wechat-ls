@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.contracts import AIRequest
-from app.ai.gateway import get_ai_provider
+from app.ai.gateway import get_runtime_ai_provider
 from app.core.auth import require_session
 from app.core.db import get_db
 
@@ -22,9 +22,9 @@ class AIChatIn(BaseModel):
 
 
 @router.get("/provider")
-async def provider(session=Depends(require_session)):
+async def provider(session=Depends(require_session), db: AsyncSession = Depends(get_db)):
     _ = session
-    ai = get_ai_provider()
+    ai = await get_runtime_ai_provider(db)
     return {
         "provider": ai.name,
         "capabilities": ai.capabilities(),
@@ -48,7 +48,7 @@ async def chat(
             AIMessage(role=message["role"], content=message["content"])
             for message in body.messages
         ]
-        result = await get_ai_provider().chat(
+        result = await (await get_runtime_ai_provider(db)).chat(
             AIRequest(
                 messages=messages,
                 user_id=str(user_id),
