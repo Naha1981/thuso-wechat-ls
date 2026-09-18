@@ -63,7 +63,7 @@ async def process_message(body: AgentMessageIn, db: AsyncSession) -> AgentMessag
             intent.args['pickup_lat']=body.latitude; intent.args['pickup_lng']=body.longitude
             payload={'category':intent.name.value,**intent.args}
             key=f"{body.channel}:{body.external_message_id or trace_id}:create_service_request"
-            saved=await create_action(db,user_id=body.user_id,session_id=session_id,action='create_service_request',payload=payload,risk='medium',idempotency_key=key)
+            saved=await create_action(db,user_id=body.user_id,session_id=session_id,action='create_service_request',payload=payload,risk='medium',idempotency_key=key,trace_id=trace_id)
             await save_session_state(db,session_id,{})
             actions=[AgentAction(id=saved['id'],action='create_service_request',requires_confirmation=True,payload=payload)]
             return AgentMessageOut(reply=f"📍 Location received. Please confirm the request:\n\n{intent.name.value.title()}\nLocation: {body.latitude:.5f}, {body.longitude:.5f}\n\nTap Confirm to continue.",intent=intent.name.value,confidence=1.0,actions=actions,trace_id=trace_id)
@@ -77,7 +77,7 @@ async def process_message(body: AgentMessageIn, db: AsyncSession) -> AgentMessag
         action='cancel_request'; payload={'request_id':intent.args.get('request_id')} ; risk='high'
         if payload['request_id']:
             key=f"{body.channel}:{body.external_message_id or trace_id}:{action}"
-            saved=await create_action(db,user_id=body.user_id,session_id=session_id,action=action,payload=payload,risk=risk,idempotency_key=key)
+            saved=await create_action(db,user_id=body.user_id,session_id=session_id,action=action,payload=payload,risk=risk,idempotency_key=key,trace_id=trace_id)
             actions=[AgentAction(id=saved['id'],action=action,requires_confirmation=True,payload=payload)]
     elif not intent.args.get('crisis_signal') and intent.name in service_intents and not request_location:
         payload={'category':intent.name.value,**intent.args}; key=f"{body.channel}:{body.external_message_id or trace_id}:create_service_request"
