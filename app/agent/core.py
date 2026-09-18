@@ -33,18 +33,18 @@ class Intent:
     args: dict
 
 PATTERNS = {
-    IntentName.RIDE: r'\b(ride|taxi|uber|lift|driver|transport|pick me up)\b',
+    IntentName.DIASPORA: r'\b(send.*(groceries|food|shopping)|feed.*family|family.*back home|diaspora|send.*home)\b',
+    IntentName.GROCERIES: r'\b(grocer(y|ies)|grocery|groceries|shoprite|checkers|pick n pay|vegetables|weekly shop)\b',
+    IntentName.FOOD: r'\b(ride|taxi|uber|lift|driver|transport|pick me up)\b',
     IntentName.MECHANIC: r'\b(mechanic|car.*(broken|repair)|puncture|flat tyre|battery|tow)\b',
     IntentName.HANDYMAN: r'\b(handyman|plumber|electrician|carpenter|repair.*house|fix.*house)\b',
     IntentName.FOOD: r'\b(food|restaurant|hungry|order.*food|takeaway)\b',
-    IntentName.GROCERIES: r'\b(grocer(y|ies)|grocery|groceries|shoprite|checkers|pick n pay|vegetables|weekly shop|food.*for (my )?family)\b',
-    IntentName.SHOPPING: r'\b(shop|shopping|buy|purchase|order.*(product|item|goods))\b',
-    IntentName.DIASPORA: r'\b(send.*(groceries|food|shopping)|feed.*family|family.*back home|diaspora|send.*home)\b',
+    IntentName.SHOPPING: r'\b(shopping|buy|purchase|order.*(product|item|goods))\b',
     IntentName.TUTOR: r'\b(tutor|homework|maths|math|study|teacher|exam|caps)\b',
     IntentName.CAREER: r'\b(cv|resume|job|jobs|career|work|employment)\b',
     IntentName.MENTAL_HEALTH: r'\b(anxious|anxiety|depress|depression|stress|panic|mental health|suicid|kill myself|hurt myself)\b',
     IntentName.POS: r'\b(pos|point of sale|stock|inventory|till|sales)\b',
-    IntentName.BUSINESS: r'\b(business|sme|merchant|shop|spaza|store|company)\b',
+    IntentName.BUSINESS: r'\b(business|sme|merchant|spaza|shop owner|store owner|company)\b',
     IntentName.FINANCE: r'\b(finance|financial|money|budget|saving|savings|debt|learn.*money|profit)\b',
     IntentName.CREDIT: r'\b(loan|credit|borrow|financ(e|ing)|credit score|eligible.*loan)\b',
     IntentName.TAX: r'\b(tax|vat|customs|duty|import|export|trade|rsl|sars)\b',
