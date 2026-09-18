@@ -2,7 +2,7 @@
 
 > **Ask THUSO. Get it done.**
 
-**Current release: v2.19.0 — NahaOS production integration control plane**
+**Current release: v2.20.0 — NahaOS universal partner adapter runtime + offline foundation**
 
 THUSO is evolving from a WhatsApp-first consumer platform into a Lesotho digital-services and AI orchestration platform. Existing identity, commerce, payment, merchant, dispatch, delivery, media and agent primitives remain the transactional foundation.
 
