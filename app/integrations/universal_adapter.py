@@ -365,34 +365,6 @@ def _element_to_dict(element: ET.Element) -> Any:
     return result
 
 
-class AdapterRegistry:
-    def __init__(self) -> None:
-        self._adapters: dict[str, PartnerAdapter] = {
-            "rest_json": RestJsonAdapter(),
-            "form_urlencoded": FormUrlEncodedAdapter(),
-            "graphql": GraphQLAdapter(),
-            "soap_xml": SoapXmlAdapter(),
-            "sftp_file": SFTPFileAdapter(),
-        }
-
-    def register(self, key: str, adapter: PartnerAdapter) -> None:
-        if not key or key in self._adapters:
-            raise ValueError("adapter key must be non-empty and unique")
-        self._adapters[key] = adapter
-
-    def get(self, key: str) -> PartnerAdapter:
-        try:
-            return self._adapters[key]
-        except KeyError as exc:
-            raise RuntimeError(f"Unsupported partner adapter: {key}") from exc
-
-
-ADAPTERS = AdapterRegistry()
-
-
-
-
-
 class SFTPFileAdapter:
     name = "sftp_file"
 
@@ -486,6 +458,38 @@ class SFTPFileAdapter:
 
         result = await __import__("asyncio").to_thread(transfer)
         return AdapterResponse(200, {}, result, json.dumps(result))
+
+def adapter_for(adapter_type: str) -> PartnerAdapter:
+    return ADAPTERS.get(adapter_type)
+
+
+class AdapterRegistry:
+    def __init__(self) -> None:
+        self._adapters: dict[str, PartnerAdapter] = {
+            "rest_json": RestJsonAdapter(),
+            "form_urlencoded": FormUrlEncodedAdapter(),
+            "graphql": GraphQLAdapter(),
+            "soap_xml": SoapXmlAdapter(),
+            "sftp_file": SFTPFileAdapter(),
+        }
+
+    def register(self, key: str, adapter: PartnerAdapter) -> None:
+        if not key or key in self._adapters:
+            raise ValueError("adapter key must be non-empty and unique")
+        self._adapters[key] = adapter
+
+    def get(self, key: str) -> PartnerAdapter:
+        try:
+            return self._adapters[key]
+        except KeyError as exc:
+            raise RuntimeError(f"Unsupported partner adapter: {key}") from exc
+
+
+ADAPTERS = AdapterRegistry()
+
+
+
+
 
 def adapter_for(adapter_type: str) -> PartnerAdapter:
     return ADAPTERS.get(adapter_type)
