@@ -84,5 +84,5 @@ async def generate_agent_reply(
         )
         reply = result.content.strip()
         return reply or deterministic_reply
-    except Exception:
+    except Exception:  # noqa: BLE001
         return deterministic_reply
