@@ -128,7 +128,7 @@ export default function AdminPage() {
       };
       await adminApi('/integrations/econet', {method:'PUT', body:JSON.stringify(payload)});
       update('api_key',''); update('api_secret',''); update('extra_headers','{}');
-      setMessage('Configuration saved. Run a connectivity test before activation.');
+      setMessage('Configuration saved. Run Test AI request and then activate production.');
       await loadConfig();
     } catch (e) {
       setError(e.message);
@@ -185,7 +185,8 @@ export default function AdminPage() {
   const status = useMemo(() => {
     if (!meta?.configured) return {label:'Not configured', tone:'neutral'};
     if (meta.enabled) return {label:'LIVE — Econet AI', tone:'good'};
-    if (meta.last_test_status === 'passed') return {label:'Test passed — ready to activate', tone:'good'};
+    if (meta.last_test_status === 'passed' && meta.last_test_kind === 'chat') return {label:'AI test passed — ready to activate', tone:'good'};
+    if (meta.last_test_status === 'passed') return {label:'Health test passed — run AI test before activation', tone:'neutral'};
     if (meta.last_test_status === 'failed') return {label:'Test failed', tone:'bad'};
     return {label:'Saved — needs connectivity test', tone:'neutral'};
   }, [meta]);
@@ -261,7 +262,7 @@ export default function AdminPage() {
         <button className="secondaryBtn" onClick={() => test(false)} disabled={busy || !meta?.configured}>Test health</button>
         <button className="secondaryBtn" onClick={() => test(true)} disabled={busy || !meta?.configured}>Test AI request</button>
         {!meta?.enabled
-          ? <button className="primaryBtn" onClick={activate} disabled={busy || meta?.last_test_status !== 'passed'}>Activate production</button>
+          ? <button className="primaryBtn" onClick={activate} disabled={busy || meta?.last_test_status !== 'passed' || meta?.last_test_kind !== 'chat'}>Activate production</button>
           : <button className="dangerBtn" onClick={deactivate} disabled={busy}>Deactivate production</button>}
       </div>
     </section>
