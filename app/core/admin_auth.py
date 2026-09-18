@@ -173,6 +173,7 @@ async def require_admin_write(
     settings = get_settings()
     csrf_cookie = request.cookies.get(settings.admin_csrf_cookie_name)
     csrf_header = request.headers.get("x-csrf-token")
-    if not csrf_cookie or not csrf_header or not hmac.compare_digest(csrf_cookie, csrf_header):
+    if (not csrf_cookie or not csrf_header or not hmac.compare_digest(csrf_cookie, csrf_header)
+            or not hmac.compare_digest(_hash_token(csrf_header), admin["csrf_hash"])):
         raise HTTPException(403, "CSRF validation failed")
     return admin
