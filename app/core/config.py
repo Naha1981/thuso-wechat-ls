@@ -1,5 +1,7 @@
 from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -45,6 +47,26 @@ class Settings(BaseSettings):
     kie_timeout_seconds: int = 90
     intelligence_max_output_chars: int = 12000
     intelligence_auto_reply: bool = False
+    ai_provider: str = "demo"
+    ai_provider_name: str = "partner-ai"
+    ai_base_url: str = ""
+    ai_api_key: str = ""
+    ai_model: str = "default"
+    ai_timeout_seconds: int = 60
+    # Econet adapter settings. Leave blank until Econet supplies the signed API contract.
+    econet_ai_base_url: str = ""
+    econet_ai_api_key: str = ""
+    econet_ai_model: str = "default"
+    econet_ai_endpoint_path: str = "/chat/completions"
+    econet_ai_timeout_seconds: int = 60
+    # Runtime integration control plane.
+    secrets_encryption_key: str = ""
+    admin_bootstrap_token: str = ""
+    admin_session_ttl_hours: int = 12
+    admin_cookie_name: str = "nahaos_admin_session"
+    admin_cookie_secure: bool = False
+    admin_cookie_samesite: str = "lax"
+    cors_allowed_origins: str = ""
 
 @lru_cache
 def get_settings() -> Settings:

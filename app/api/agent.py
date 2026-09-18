@@ -11,6 +11,7 @@ from app.agent.responses import response_for
 from app.services.agent_execution import create_action, approve_and_execute, AgentExecutionError
 from app.services.session import get_or_create_session, save_session_state
 from app.services.memory import record_turn, recent_context, refresh_summary
+from app.services.ai_assistant import generate_agent_reply
 
 router=APIRouter(prefix='/agent', tags=['agent'])
 
@@ -83,9 +84,20 @@ async def process_message(body: AgentMessageIn, db: AsyncSession) -> AgentMessag
         saved=await create_action(db,user_id=body.user_id,session_id=session_id,action='create_service_request',payload=payload,risk='medium',idempotency_key=key)
         actions=[AgentAction(id=saved['id'],action='create_service_request',requires_confirmation=True,payload=payload)]
     reply=response_for(intent.name,crisis=bool(intent.args.get('crisis_signal')))
-    # Context is currently exposed through the service boundary for downstream
-    # model/routing adapters; deterministic intent behavior remains unchanged.
-    _ = context
+    if not intent.args.get('crisis_signal'):
+        reply = await generate_agent_reply(
+            db,
+            trace_id=trace_id,
+            user_id=body.user_id,
+            session_id=session_id,
+            channel=body.channel,
+            user_text=body.text,
+            deterministic_reply=reply,
+            intent_name=intent.name.value,
+            confidence=intent.confidence,
+            actions=[{"action":a.action,"requires_confirmation":a.requires_confirmation,"payload":a.payload} for a in actions],
+            context=context,
+        )
     await refresh_summary(db, user_id=body.user_id, channel=body.channel)
     return AgentMessageOut(reply=reply,intent=intent.name.value,confidence=intent.confidence,actions=actions,trace_id=trace_id,request_location=request_location)
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from app.core.config import get_settings
+
 
 class ConfigurationError(RuntimeError):
     pass
@@ -14,6 +16,7 @@ def validate_startup_configuration() -> None:
         'OPERATOR_API_KEY':s.operator_api_key,
     }
     if s.app_env.lower() in {'production','prod'}:
+        required.update({'SECRETS_ENCRYPTION_KEY':s.secrets_encryption_key})
         missing=[k for k,v in required.items() if not v or str(v).startswith('change-me')]
         if missing: raise ConfigurationError('missing production configuration: '+', '.join(missing))
         if s.whatsapp_transport == 'baileys' and 'localhost' in s.main_app_webhook_url.lower():

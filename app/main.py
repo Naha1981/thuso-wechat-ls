@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.api.routes import router as api_router
 from app.api.webhooks import router as webhook_router
@@ -27,19 +28,28 @@ from app.api.intelligence import router as intelligence_router
 from app.api.food import router as food_router
 from app.api.whatsapp_identity import router as whatsapp_identity_router
 from app.api.whatsapp_ops import router as whatsapp_ops_router
+from app.api.ai import router as ai_router
+from app.api.admin import router as admin_router
 from app.core.startup import validate_startup_configuration
 
 settings=get_settings()
-app=FastAPI(title="THUSO Platform API", version="2.17.0")
+app=FastAPI(title="THUSO Platform API", version="2.19.0")
+
+origins=[x.strip() for x in settings.cors_allowed_origins.split(",") if x.strip()]
+if origins:
+    app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 @app.on_event("startup")
 async def startup_validation():
     validate_startup_configuration()
+
 app.include_router(api_router, prefix=settings.api_prefix)
 app.include_router(platform_router, prefix=settings.api_prefix)
 app.include_router(execution_router, prefix=settings.api_prefix)
 app.include_router(webhook_router, prefix="/webhooks", tags=["webhooks"])
 app.include_router(agent_router, prefix=settings.api_prefix)
+app.include_router(ai_router, prefix=settings.api_prefix)
+app.include_router(admin_router, prefix=settings.api_prefix)
 app.include_router(provider_router, prefix=settings.api_prefix)
 app.include_router(dispatch_router, prefix=settings.api_prefix)
 app.include_router(realtime_router, prefix=settings.api_prefix)
@@ -64,4 +74,4 @@ app.include_router(whatsapp_identity_router, prefix=settings.api_prefix)
 app.include_router(whatsapp_ops_router, prefix=settings.api_prefix)
 
 @app.get("/healthz")
-async def healthz(): return {"status":"ok","service":settings.app_name,"version":"2.17.0"}
+async def healthz(): return {"status":"ok","service":settings.app_name,"version":"2.19.0"}

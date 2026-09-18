@@ -1,74 +1,72 @@
-# THUSO Platform
+# THUSO / NahaOS
 
 > **Ask THUSO. Get it done.**
 
-**Current release: v2.16 — Food + Delivery Customer Experience**
+**Current release: v2.19.0 — NahaOS production integration control plane**
 
-THUSO is a WhatsApp-first consumer platform. WhatsApp is the interface; the Naha backend provides identity, commerce, payments, merchants, dispatch, delivery, media, memory and agent orchestration.
+THUSO is evolving from a WhatsApp-first consumer platform into a Lesotho digital-services and AI orchestration platform. Existing identity, commerce, payment, merchant, dispatch, delivery, media and agent primitives remain the transactional foundation.
 
-## First production vertical: Food + Delivery
+## Architecture
 
-The customer journey is:
+Citizen / Business → WhatsApp / Web / USSD / Voice → Identity + Consent → AI Gateway + Agent Orchestrator → Policy + Tools → Government / Enterprise / Commerce Services → Payment Gateway / Partner APIs.
 
-`FOOD` → discover merchants → `MENU <merchant_id>` → `ADD <product_id> <quantity>` → `CART` → share location → `CHECKOUT` → payment → merchant preparation → courier dispatch → live delivery state → proof/confirmation.
+Econet AI is a first-class provider through an adapter boundary. The demo works without Econet credentials. When Econet supplies an approved API contract, its credentials/endpoints are configured in the provider layer without rewriting citizen workflows.
 
-The existing v2.14 commerce, merchant, dispatch, delivery and payment primitives remain the transactional foundation. v2.15 adds the customer-facing Food API and persistent delivery location/timeline primitives.
+## Existing foundation
 
-## Customer API
+- Identity and authenticated sessions
+- Agent intent/routing and confirmation workflow
+- WhatsApp orchestration
+- Commerce, merchants and delivery
+- Payment-provider abstraction and routing
+- Media intelligence
+- Audit/action receipts
+- Lesotho-first currency and payment contracts
+
+## AI gateway
+
+GET `/api/v1/ai/provider`
+
+POST `/api/v1/ai/chat`
+
+Configuration defaults to the isolated NahaOS Sandbox.
+
+For production, the NahaOS Integration Control Plane is the source of truth. Authorized Econet administrators can open /admin, sign in, enter their approved API contract, save encrypted secrets, test the connection, and activate production. No source-code change, rebuild, or NahaLabs-side API access is required after deployment.
+
+The runtime boundary is:
+
+Econet API
+   ↓
+EconetAIProvider
+   ↓
+AIProvider
+   ↓
+NahaOS Agent + Services + Policy + Tools
+
+The sandbox and production paths are isolated. A sandbox response never writes to or uses Econet production credentials.
+
+The runtime boundary is intentionally fixed:
 
 ```text
-GET   /api/v1/food/feed
-GET   /api/v1/food/merchants/{merchant_id}/menu
-GET   /api/v1/food/location
-PUT   /api/v1/food/location
-PATCH /api/v1/food/cart/items
-POST  /api/v1/food/checkout
-GET   /api/v1/food/orders
-GET   /api/v1/food/orders/{order_id}/timeline
-POST  /api/v1/food/orders/{order_id}/cancel  # pending-payment orders
+EconetAIProvider → AIProvider → NahaOS
 ```
 
-## Database
+NahaOS does not import or depend on Econet-specific SDKs. When Econet changes its API schema, only the adapter mapping changes.
 
-Apply:
+AI chat is authenticated through the existing NahaOS session layer and successful calls are recorded in `ai_usage_events` with a trace ID.
 
-```text
-supabase/migrations/034_food_delivery_experience.sql
-```
+## Monetization proof
 
-This adds customer delivery locations and indexes the commerce/delivery event streams for chronological order tracking.
+THUSO is designed to prove Econet commercial value through traceable events rather than assumptions. See `docs/ECONET_MONETIZATION.md` and `docs/REVENUE_PROOF.md`.
 
-## WhatsApp
+The proof model distinguishes observed, attributed and estimated value.
 
-The existing WhatsApp commerce flow remains available:
+## Food + delivery
 
-```text
-FOOD / MENU
-MENU <merchant_id>
-ADD <product_id> <quantity>
-CART
-CHECKOUT
-```
-
-Payment and delivery notifications continue through the durable outbox.
-
-## Customer web
-
-`web/` is a deliberately lightweight Next.js companion surface. It is not intended to replace WhatsApp. It provides a browser fallback for discovery, menu browsing, cart and order visibility while keeping the primary transaction APIs shared with WhatsApp.
-
-## Lesotho product principles
-
-- LSL-first pricing and local payment orchestration.
-- WhatsApp-first interaction with a low-data web fallback.
-- Location is explicit before delivery checkout.
-- No map SDK or image-heavy dependency is required for the core food flow.
-- Payment-provider credentials remain server-side.
-- Design for inexpensive Android devices and intermittent connectivity.
+The existing journey remains available: FOOD → merchant → menu → cart → location → checkout → payment → preparation → dispatch → delivery → proof/confirmation.
 
 ## Verification
 
-```text
-70 passed
-```
+Run pytest -q tests/test_ai_gateway.py tests/test_control_plane.py, ruff check app tests, python -m compileall app tests, npm run build in web/, and npm run typecheck in operator/.
 
-Python compilation checks pass. Live Supabase, Redis, WhatsApp and payment-provider integration tests still require production-like infrastructure and credentials.
+External provider, WhatsApp, Supabase and payment integrations require their respective credentials/contracts and are intentionally not fabricated.
