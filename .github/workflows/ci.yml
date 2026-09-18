@@ -23,7 +23,7 @@ jobs:
           app/ai
           app/api/ai.py
           app/api/admin.py
-          app/agent
+          app/services/ai_assistant.py
           app/core/admin_auth.py
           app/core/config.py
           app/core/crypto.py
