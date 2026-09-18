@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_model: str = "default"
     ai_timeout_seconds: int = 60
+    # Econet adapter settings. Leave blank until Econet supplies the signed API contract.
+    econet_ai_base_url: str = ""
+    econet_ai_api_key: str = ""
+    econet_ai_model: str = "default"
+    econet_ai_endpoint_path: str = "/chat/completions"
+    econet_ai_timeout_seconds: int = 60
 
 @lru_cache
 def get_settings() -> Settings:
