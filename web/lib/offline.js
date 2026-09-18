@@ -18,12 +18,15 @@ function openDb() {
 
 export async function queueOfflineRequest({url, method = 'POST', body, headers = {}, idempotencyKey}) {
   const db = await openDb();
+  const safeHeaders = {...headers};
+  delete safeHeaders.Authorization;
+  delete safeHeaders.authorization;
   const item = {
     id: crypto.randomUUID(),
     url,
     method,
     body,
-    headers,
+    headers: safeHeaders,
     idempotencyKey: idempotencyKey || crypto.randomUUID(),
     queuedAt: new Date().toISOString(),
   };
@@ -44,10 +47,12 @@ export async function flushOfflineQueue() {
 
   for (const item of items) {
     try {
+      const currentToken = typeof window !== 'undefined' ? window.localStorage.getItem('thuso_session') : null;
       const headers = {
         'Content-Type': 'application/json',
         ...item.headers,
         'Idempotency-Key': item.idempotencyKey,
+        ...(currentToken ? {Authorization: 'Bearer ' + currentToken} : {}),
       };
       const response = await fetch(item.url, {
         method: item.method,
