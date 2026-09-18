@@ -86,3 +86,7 @@ Payments, identity changes, government submissions, loan disbursement, purchases
 - No-data moments: local queue and clear pending state until connectivity returns.
 
 Offline mode means resilient operation, not pretending that an external transaction happened when no server could confirm it.
+
+
+## Activation gate
+A partner is never switched live merely because its hostname responds. At least one real business/service operation must pass through the configured contract before activation.
