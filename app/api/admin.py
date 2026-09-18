@@ -394,6 +394,82 @@ async def deactivate_econet(admin=Depends(require_admin_write), db: AsyncSession
     return {"ok": True, "active_provider": "demo"}
 
 
+
+
+class PartnerInviteIn(BaseModel):
+    stakeholder_name: str = Field(min_length=2, max_length=200)
+    stakeholder_type: str = Field(min_length=2, max_length=80)
+    service_domain: str = Field(min_length=2, max_length=100)
+    expires_hours: int = Field(default=24, ge=1, le=168)
+
+
+@router.post("/partner-invites")
+async def create_partner_invite(
+    body: PartnerInviteIn,
+    admin=Depends(require_admin_write),
+    db: AsyncSession = Depends(get_db),
+):
+    import secrets
+    from datetime import timedelta
+    from app.services.partner_integrations import hash_token
+
+    raw_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(UTC) + timedelta(hours=body.expires_hours)
+    invite_id = (
+        await db.execute(
+            text("""
+                insert into partner_invites(token_hash, stakeholder_name, stakeholder_type, service_domain, expires_at, created_by)
+                values(:token_hash,:name,:type,:domain,:expires_at,:admin_id)
+                returning id
+            """),
+            {
+                "token_hash": hash_token(raw_token),
+                "name": body.stakeholder_name,
+                "type": body.stakeholder_type,
+                "domain": body.service_domain,
+                "expires_at": expires_at,
+                "admin_id": admin["admin_user_id"],
+            },
+        )
+    ).scalar_one()
+    await _audit(
+        db, str(admin["admin_user_id"]), "partner.invite.create", "partner_invite",
+        str(invite_id), {
+            "stakeholder_name": body.stakeholder_name,
+            "stakeholder_type": body.stakeholder_type,
+            "service_domain": body.service_domain,
+            "expires_at": expires_at.isoformat(),
+        },
+    )
+    await db.commit()
+    return {
+        "invite_id": str(invite_id),
+        "stakeholder_name": body.stakeholder_name,
+        "service_domain": body.service_domain,
+        "expires_at": expires_at,
+        "onboarding_token": raw_token,
+        "onboarding_path": "/partner/onboard",
+    }
+
+
+@router.get("/partner-integrations")
+async def list_partner_integrations(
+    admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    rows = (
+        await db.execute(
+            text("""
+                select id, stakeholder_name, stakeholder_type, service_domain,
+                       provider_key, environment, enabled, base_url, api_spec_url,
+                       last_test_at, last_test_status, last_test_operation, version
+                from partner_integrations
+                order by updated_at desc
+            """)
+        )
+    ).mappings().all()
+    return {"integrations": [dict(row) for row in rows]}
+
 @router.get("/outcomes")
 async def outcomes(
     days: int = 30,
