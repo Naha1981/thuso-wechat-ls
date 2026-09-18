@@ -139,14 +139,7 @@ def _login_response(response: Response, token: str, csrf: str, expires_at):
         settings.admin_session_ttl_hours * 3600,
         httponly=True,
     )
-    _cookie(
-        response,
-        settings.admin_csrf_cookie_name,
-        csrf,
-        settings.admin_session_ttl_hours * 3600,
-        httponly=False,
-    )
-    return {"ok": True, "expires_at": expires_at}
+    return {"ok": True, "expires_at": expires_at, "csrf_token": csrf}
 
 
 @router.post("/auth/bootstrap")
@@ -258,7 +251,6 @@ async def logout(
     await db.commit()
     settings = get_settings()
     response.delete_cookie(settings.admin_cookie_name, path="/")
-    response.delete_cookie(settings.admin_csrf_cookie_name, path="/")
     return {"ok": True}
 
 
