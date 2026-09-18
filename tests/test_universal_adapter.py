@@ -4,17 +4,31 @@ import httpx
 import pytest
 import respx
 
-from app.integrations.universal_adapter import AdapterContext, GraphQLAdapter, FormUrlEncodedAdapter, RestJsonAdapter, SoapXmlAdapter
+from app.integrations.contracts import ServiceRequest
+from app.integrations.universal_adapter import (
+    AdapterContext,
+    FormUrlEncodedAdapter,
+    GraphQLAdapter,
+    RestJsonAdapter,
+    SoapXmlAdapter,
+)
+from app.services.service_gateway import ServiceGateway
+from app.services.template_engine import render
 
 
-def ctx(adapter_type="rest_json", auth_scheme="none", auth_config=None, secrets=None, operation_config=None):
+def ctx(*, auth_scheme="none", auth_config=None, secrets=None, operation_config=None):
     return AdapterContext(
         base_url="https://partner.example",
         operation="demo",
         trace_id=str(uuid4()),
         timeout_seconds=10,
         request_defaults={},
-        operation_config=operation_config or {"path": "/demo", "method": "POST", "request_template": {"payload": "{{payload}}"}},
+        operation_config=operation_config
+        or {
+            "path": "/demo",
+            "method": "POST",
+            "request_template": {"payload": "{{payload}}"},
+        },
         auth_scheme=auth_scheme,
         auth_config=auth_config or {},
         secrets=secrets or {},
@@ -36,11 +50,20 @@ async def test_rest_json_adapter():
 @pytest.mark.asyncio
 @respx.mock
 async def test_rest_json_hmac_headers():
-    route = respx.post("https://partner.example/demo").mock(return_value=httpx.Response(200, json={"ok": True}))
-    context = ctx(auth_scheme="hmac_sha256", auth_config={"signature_header": "X-Signature", "timestamp_header": "X-Timestamp"}, secrets={"hmac_secret": "secret"})
+    route = respx.post("https://partner.example/demo").mock(
+        return_value=httpx.Response(200, json={"ok": True})
+    )
+    context = ctx(
+        auth_scheme="hmac_sha256",
+        auth_config={
+            "signature_header": "X-Signature",
+            "timestamp_header": "X-Timestamp",
+        },
+        secrets={"hmac_secret": "secret"},
+    )
     await RestJsonAdapter().execute(context, {"amount": 100})
-    assert route.called
     request = route.calls[0].request
+    assert route.called
     assert request.headers.get("X-Signature")
     assert request.headers.get("X-Timestamp")
     assert request.headers.get("X-NahaOS-Idempotency-Key") == context.trace_id
@@ -50,9 +73,17 @@ async def test_rest_json_hmac_headers():
 @respx.mock
 async def test_graphql_adapter():
     route = respx.post("https://partner.example/demo").mock(
-        return_value=httpx.Response(200, json={"data": {"customer": {"id": "c1"}}})
+        return_value=httpx.Response(
+            200,
+            json={"data": {"customer": {"id": "c1"}}},
+        )
     )
-    context = ctx(operation_config={"path": "/demo", "query": "query Customer($id: ID!){ customer(id:$id){ id } }", "variables": {"id": "{{payload.customer_id}}"})
+    operation_config = {
+        "path": "/demo",
+        "query": "query Customer($id: ID!){ customer(id:$id){ id } }",
+        "variables": {"id": "{{payload.customer_id}}"},
+    }
+    context = ctx(operation_config=operation_config)
     result = await GraphQLAdapter().execute(context, {"customer_id": "c1"})
     assert route.called
     assert result.data["data"]["customer"]["id"] == "c1"
@@ -61,8 +92,20 @@ async def test_graphql_adapter():
 @pytest.mark.asyncio
 @respx.mock
 async def test_form_urlencoded_adapter():
-    route = respx.post("https://partner.example/demo").mock(return_value=httpx.Response(200, json={"accepted": True}))
-    result = await FormUrlEncodedAdapter().execute(ctx(operation_config={"path": "/demo", "request_template": {"name": "{{payload.name}}", "amount": "{{payload.amount}}"}}), {"name": "A", "amount": 50})
+    route = respx.post("https://partner.example/demo").mock(
+        return_value=httpx.Response(200, json={"accepted": True})
+    )
+    operation_config = {
+        "path": "/demo",
+        "request_template": {
+            "name": "{{payload.name}}",
+            "amount": "{{payload.amount}}",
+        },
+    }
+    result = await FormUrlEncodedAdapter().execute(
+        ctx(operation_config=operation_config),
+        {"name": "A", "amount": 50},
+    )
     assert route.called
     assert b"name=A" in route.calls[0].request.content
     assert result.data["accepted"] is True
@@ -72,14 +115,21 @@ async def test_form_urlencoded_adapter():
 @respx.mock
 async def test_soap_xml_adapter():
     route = respx.post("https://partner.example/demo").mock(
-        return_value=httpx.Response(200, text="<Envelope><Body><Result><Status>OK</Status></Result></Body></Envelope>")
+        return_value=httpx.Response(
+            200,
+            text="<Envelope><Body><Result><Status>OK</Status></Result></Body></Envelope>",
+        )
     )
+    operation_config = {
+        "path": "/demo",
+        "xml_template": (
+            "<Envelope><Body><Submit><Name>{{payload.name}}</Name>"
+            "</Submit></Body></Envelope>"
+        ),
+        "soap_action": "Submit",
+    }
     result = await SoapXmlAdapter().execute(
-        ctx(operation_config={
-            "path": "/demo",
-            "xml_template": "<Envelope><Body><Submit><Name>{{payload.name}}</Name></Submit></Body></Envelope>",
-            "soap_action": "Submit",
-        }),
+        ctx(operation_config=operation_config),
         {"name": "A"},
     )
     assert route.called
@@ -90,14 +140,21 @@ async def test_soap_xml_adapter():
 @respx.mock
 async def test_oauth2_client_credentials_adapter():
     token_route = respx.post("https://auth.example/token").mock(
-        return_value=httpx.Response(200, json={"access_token": "access-123", "expires_in": 300})
+        return_value=httpx.Response(
+            200,
+            json={"access_token": "access-123", "expires_in": 300},
+        )
     )
     api_route = respx.post("https://partner.example/demo").mock(
         return_value=httpx.Response(200, json={"accepted": True})
     )
     context = ctx(
         auth_scheme="oauth2_client_credentials",
-        auth_config={"token_url": "https://auth.example/token", "client_id": "client-1", "scope": "payments"},
+        auth_config={
+            "token_url": "https://auth.example/token",
+            "client_id": "client-1",
+            "scope": "payments",
+        },
         secrets={"client_secret": "secret"},
     )
     result = await RestJsonAdapter().execute(context, {"amount": 5})
@@ -109,13 +166,51 @@ async def test_oauth2_client_credentials_adapter():
 
 @pytest.mark.asyncio
 async def test_template_nested_values():
-    from app.services.template_engine import render
-    value = render({"id": "{{payload.customer_id}}", "quote": "{{steps.quote.id}}"}, {
-        "payload": {"customer_id": "c1"},
-        "steps": {"quote": {"id": "q1"}},
-    })
+    value = render(
+        {
+            "id": "{{payload.customer_id}}",
+            "quote": "{{steps.quote.id}}",
+        },
+        {
+            "payload": {"customer_id": "c1"},
+            "steps": {"quote": {"id": "q1"}},
+        },
+    )
     assert value == {"id": "c1", "quote": "q1"}
+
 
 def test_adapter_registry_includes_sftp():
     from app.integrations.universal_adapter import adapter_for
+
     assert adapter_for("sftp_file").name == "sftp_file"
+
+
+class FakeDefaultProvider:
+    name = "default"
+
+    async def health(self):
+        return {"status": "ok"}
+
+    async def execute(self, request):
+        from app.integrations.contracts import ServiceResult
+
+        return ServiceResult(
+            provider=self.name,
+            status="executed",
+            data={"domain": request.domain},
+            observed=True,
+        )
+
+
+@pytest.mark.asyncio
+async def test_service_gateway_default_provider_contract():
+    gateway = ServiceGateway(default_provider=FakeDefaultProvider())
+    result = await gateway.execute(
+        ServiceRequest(
+            trace_id=uuid4(),
+            user_id=uuid4(),
+            domain="health",
+            operation="status",
+        )
+    )
+    assert result.provider == "default"
