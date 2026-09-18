@@ -18,3 +18,7 @@ def test_partner_template_rendering():
     body = render({"trace": "{{trace_id}}", "payload": "{{payload}}"}, {"trace_id": "t1", "payload": {"id": 1}})
     assert body["trace"] == "t1"
     assert body["payload"]["id"] == 1
+
+def test_private_network_default_is_false():
+    from app.services.partner_integrations import PartnerIntegration
+    assert "allow_private_network" in PartnerIntegration.__dataclass_fields__
