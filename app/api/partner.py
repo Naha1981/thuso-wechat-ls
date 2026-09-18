@@ -295,8 +295,8 @@ async def activate(
     config, _ = await _saved(db, str(invite["id"]))
     if not config:
         raise HTTPException(404, "Integration has not been configured")
-    if config.last_test_status != "passed":
-        raise HTTPException(409, "Run and pass an integration test before activation")
+    if config.last_test_status != "passed" or config.last_test_operation in {None, "health"}:
+        raise HTTPException(409, "Run and pass at least one service operation test before activation")
     await db.execute(text("update partner_integrations set enabled=false where service_domain=:domain and environment='production'"), {"domain": config.service_domain})
     await db.execute(text("update partner_integrations set enabled=true,updated_at=now() where id=:id"), {"id": config.id})
     await db.execute(text("update partner_invites set consumed_at=now() where id=:id"), {"id": invite["id"]})
