@@ -4,6 +4,7 @@ import asyncio
 import ipaddress
 import json
 import socket
+import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -85,7 +86,7 @@ def _validate_endpoint(base_url: str, allow_private_network: bool = False) -> No
         raise ValueError("Econet base URL must use HTTP or HTTPS")
     if not parsed.host:
         raise ValueError("Econet base URL must include a hostname")
-    if parsed.scheme == "http" and get_settings().app_env.lower() in {"prod", "production"}:
+    if parsed.scheme == "http" and os.getenv("APP_ENV", "development").lower() in {"prod", "production"}:
         raise ValueError("Production Econet endpoints must use HTTPS")
     if allow_private_network:
         return
