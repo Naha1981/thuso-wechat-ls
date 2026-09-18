@@ -6,6 +6,7 @@ from app.core.config import get_settings
 
 
 def get_ai_provider() -> AIProvider:
+    """Environment fallback used outside request-scoped runtime selection."""
     settings = get_settings()
     provider = settings.ai_provider.lower()
 
@@ -31,3 +32,13 @@ def get_ai_provider() -> AIProvider:
         )
 
     raise RuntimeError(f"Unsupported AI provider: {provider}")
+
+
+async def get_runtime_ai_provider(db) -> AIProvider:
+    """Select the live provider without requiring a restart after portal activation."""
+    from app.services.econet_integration import load_active_econet_config
+
+    config = await load_active_econet_config(db)
+    if config:
+        return EconetAIProvider(config=config)
+    return get_ai_provider()
