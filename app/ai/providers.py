@@ -102,11 +102,17 @@ class EconetAIProvider:
         data = response.json()
         mapping = config.response_mapping or DEFAULT_RESPONSE_MAPPING
 
-        content = _json_path(data, mapping.get("content_path"))
+        try:
+            content = _json_path(data, mapping.get("content_path"))
+        except (KeyError, IndexError, TypeError, ValueError):
+            content = None
         if not content:
             raise RuntimeError("Econet AI returned no assistant content")
 
-        model = _json_path(data, mapping.get("model_path")) or config.model
+        try:
+            model = _json_path(data, mapping.get("model_path")) or config.model
+        except (KeyError, IndexError, TypeError, ValueError):
+            model = config.model
         usage = {}
         input_path = mapping.get("input_units_path")
         output_path = mapping.get("output_units_path")
