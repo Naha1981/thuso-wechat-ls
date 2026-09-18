@@ -18,7 +18,7 @@ from app.core.config import get_settings
 from app.core.crypto import SecretCipher
 from app.integrations.universal_adapter import AdapterContext, adapter_for
 
-SECRET_FIELDS = {"api_key", "api_secret", "extra_headers"}
+SECRET_FIELDS = {"api_key", "api_secret", "extra_headers", "hmac_secret", "client_secret", "client_cert_pem", "client_key_pem"}
 
 
 @dataclass(frozen=True)
@@ -189,33 +189,22 @@ async def test_partner(config: PartnerIntegration, operation: str | None = None)
     if not operation:
         if config.health_endpoint_path:
             path = config.health_endpoint_path
-            method = "GET"
-            body = None
-            kind = "health"
-        else:
-            operation = next(iter(config.operation_configs), None)
-            if not operation:
-                raise RuntimeError("Configure a health endpoint or at least one operation before testing")
-    if operation:
-        definition = config.operation_configs.get(operation)
-        if not isinstance(definition, dict):
-            raise RuntimeError(f"Unknown partner operation: {operation}")
-        path = normalise_path(definition.get("path"), None)
-        if not path:
-            raise RuntimeError("Operation path is required")
-        method = str(definition.get("method", "POST")).upper()
-        body = render({**config.request_defaults, **(definition.get("request_template") or {})}, {
-            "trace_id": "nahaos-partner-smoke",
-            "operation": operation,
-            "payload": {},
-        })
-        kind = operation
-    headers = {"Accept": "application/json", "X-NahaOS-Trace-Id": "nahaos-partner-smoke", **auth_headers(config)}
-    async with httpx.AsyncClient(timeout=config.timeout_seconds, follow_redirects=False) as client:
-        response = await client.request(method, f"{config.base_url}{path}", json=body if method != "GET" else None, headers=headers)
-    if response.status_code >= 400:
-        raise RuntimeError(f"Partner API returned HTTP {response.status_code}")
-    return {"ok": True, "kind": kind, "status_code": response.status_code}
+            headers = {"Accept": "application/json", "X-NahaOS-Trace-Id": "nahaos-partner-health-test"}
+            async with httpx.AsyncClient(timeout=config.timeout_seconds, follow_redirects=False) as client:
+                response = await client.get(f"{config.base_url}{path}", headers=headers)
+            if response.status_code >= 400:
+                raise RuntimeError(f"Partner health endpoint returned HTTP {response.status_code}")
+            return {"ok": True, "kind": "health", "status_code": response.status_code}
+        operation = next(iter(config.operation_configs), None)
+        if not operation:
+            raise RuntimeError("Configure a health endpoint or at least one operation before testing")
+    result, _ = await execute_partner(
+        config,
+        operation=str(operation),
+        trace_id="00000000-0000-0000-0000-000000000001",
+        payload={},
+    )
+    return {"ok": True, "kind": str(operation), "status_code": result.get("_status_code", 200), "adapter": config.adapter_type}
 
 
 async def execute_partner(config: PartnerIntegration, *, operation: str, trace_id: str, payload: dict[str, Any]) -> tuple[dict[str, Any], bool]:
