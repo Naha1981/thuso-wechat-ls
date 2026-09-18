@@ -110,16 +110,28 @@ class EconetAIProvider:
         usage = {}
         input_path = mapping.get("input_units_path")
         output_path = mapping.get("output_units_path")
-        if input_path:
+        input_paths = [input_path, "usage.input_tokens", "usage.prompt_tokens"]
+        output_paths = [output_path, "usage.output_tokens", "usage.completion_tokens"]
+        for path in input_paths:
+            if not path:
+                continue
             try:
-                usage["input_tokens"] = _json_path(data, input_path)
+                value = _json_path(data, path)
+                if value is not None:
+                    usage["input_tokens"] = value
+                    break
             except (KeyError, IndexError, TypeError, ValueError):
-                pass
-        if output_path:
+                continue
+        for path in output_paths:
+            if not path:
+                continue
             try:
-                usage["output_tokens"] = _json_path(data, output_path)
+                value = _json_path(data, path)
+                if value is not None:
+                    usage["output_tokens"] = value
+                    break
             except (KeyError, IndexError, TypeError, ValueError):
-                pass
+                continue
 
         return AIResponse(
             provider=self.name,
