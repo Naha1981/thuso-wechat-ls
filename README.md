@@ -2,7 +2,7 @@
 
 > **Ask THUSO. Get it done.**
 
-**Current release: v2.18.0 — NahaOS/Econet AI integration foundation**
+**Current release: v2.19.0 — NahaOS production integration control plane**
 
 THUSO is evolving from a WhatsApp-first consumer platform into a Lesotho digital-services and AI orchestration platform. Existing identity, commerce, payment, merchant, dispatch, delivery, media and agent primitives remain the transactional foundation.
 
@@ -29,7 +29,21 @@ GET `/api/v1/ai/provider`
 
 POST `/api/v1/ai/chat`
 
-Configuration defaults to demo mode. For the Econet adapter use `AI_PROVIDER=econet` and supply only the credentials/endpoint values provided by Econet.
+Configuration defaults to the isolated NahaOS Sandbox.
+
+For production, the NahaOS Integration Control Plane is the source of truth. Authorized Econet administrators can open /admin, sign in, enter their approved API contract, save encrypted secrets, test the connection, and activate production. No source-code change, rebuild, or NahaLabs-side API access is required after deployment.
+
+The runtime boundary is:
+
+Econet API
+   ↓
+EconetAIProvider
+   ↓
+AIProvider
+   ↓
+NahaOS Agent + Services + Policy + Tools
+
+The sandbox and production paths are isolated. A sandbox response never writes to or uses Econet production credentials.
 
 The runtime boundary is intentionally fixed:
 
@@ -53,6 +67,6 @@ The existing journey remains available: FOOD → merchant → menu → cart → 
 
 ## Verification
 
-Run `pytest`, `ruff check .`, and `python -m compileall app`.
+Run pytest -q tests/test_ai_gateway.py tests/test_control_plane.py, ruff check app tests, python -m compileall app tests, npm run build in web/, and npm run typecheck in operator/.
 
 External provider, WhatsApp, Supabase and payment integrations require their respective credentials/contracts and are intentionally not fabricated.
