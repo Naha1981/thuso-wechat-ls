@@ -46,6 +46,7 @@ class EconetIntegration:
     response_mapping: dict[str, Any]
     secrets: dict[str, Any]
     last_test_status: str | None
+    last_test_kind: str | None
     last_test_at: str | None
 
 
@@ -164,6 +165,7 @@ def build_econet_config(row: dict, secrets: dict[str, Any]) -> EconetIntegration
         response_mapping=row.get("response_mapping") or DEFAULT_RESPONSE_MAPPING,
         secrets=secrets,
         last_test_status=row.get("last_test_status"),
+        last_test_kind=row.get("last_test_kind"),
         last_test_at=str(row["last_test_at"]) if row.get("last_test_at") else None,
     )
 
@@ -176,7 +178,7 @@ async def _load_saved_row(db: AsyncSession):
                 select id, environment, enabled, allow_private_network, base_url,
                        chat_endpoint_path, health_endpoint_path, auth_scheme,
                        auth_header_name, model, timeout_seconds, request_template,
-                       response_mapping, secret_ciphertext, last_test_status, last_test_at
+                       response_mapping, secret_ciphertext, last_test_status, last_test_kind, last_test_at
                 from integration_configs
                 where provider='econet-ai' and environment='production'
                 limit 1
@@ -284,6 +286,7 @@ async def save_econet_config(db: AsyncSession, *, admin_id: str, payload: dict[s
                   allow_private_network=:allow_private_network,
                   secret_ciphertext=:secret_ciphertext,
                   last_test_status=null,
+                  last_test_kind=null,
                   last_test_at=null,
                   last_test_error=null,
                   version=version+1,
