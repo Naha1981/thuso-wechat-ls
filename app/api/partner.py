@@ -77,7 +77,7 @@ async def _saved(db: AsyncSession, invite_id: str):
         await db.execute(
             text("""
                 select id, stakeholder_name, stakeholder_type, service_domain,
-                       provider_key, environment, enabled, base_url, api_spec_url,
+                       provider_key, environment, enabled, allow_private_network, base_url, api_spec_url,
                        health_endpoint_path, auth_scheme, auth_header_name,
                        timeout_seconds, request_defaults, operation_configs,
                        response_mappings, secret_ciphertext,
@@ -109,6 +109,7 @@ def _public(config, secrets_map):
         "environment": config.environment,
         "enabled": config.enabled,
         "base_url": config.base_url,
+        "allow_private_network": config.allow_private_network,
         "api_spec_url": config.api_spec_url,
         "health_endpoint_path": config.health_endpoint_path,
         "auth_scheme": config.auth_scheme,
@@ -178,6 +179,7 @@ async def save(
         "auth_scheme": body.auth_scheme,
         "auth_header_name": body.auth_header_name,
         "timeout_seconds": body.timeout_seconds,
+        "allow_private_network": body.allow_private_network,
         "request_defaults": json.dumps(body.request_defaults),
         "operation_configs": json.dumps(body.operation_configs),
         "response_mappings": json.dumps(body.response_mappings),
@@ -195,7 +197,8 @@ async def save(
               provider_key=:provider_key, enabled=false, base_url=:base_url,
               api_spec_url=:api_spec_url, health_endpoint_path=:health_endpoint_path,
               auth_scheme=:auth_scheme, auth_header_name=:auth_header_name,
-              timeout_seconds=:timeout_seconds, request_defaults=cast(:request_defaults as jsonb),
+              timeout_seconds=:timeout_seconds, allow_private_network=:allow_private_network,
+              request_defaults=cast(:request_defaults as jsonb),
               operation_configs=cast(:operation_configs as jsonb),
               response_mappings=cast(:response_mappings as jsonb),
               secret_ciphertext=:secret_ciphertext, last_test_at=null,
@@ -210,11 +213,11 @@ async def save(
                 insert into partner_integrations(
                   partner_invite_id, stakeholder_name, stakeholder_type, service_domain,
                   provider_key, environment, enabled, base_url, api_spec_url,
-                  health_endpoint_path, auth_scheme, auth_header_name, timeout_seconds,
+                  health_endpoint_path, allow_private_network, auth_scheme, auth_header_name, timeout_seconds,
                   request_defaults, operation_configs, response_mappings, secret_ciphertext
                 ) values (
                   :invite_id, :name, :type, :domain, :provider_key, 'production', false,
-                  :base_url, :api_spec_url, :health_endpoint_path, :auth_scheme,
+                  :base_url, :api_spec_url, :health_endpoint_path, :allow_private_network, :auth_scheme,
                   :auth_header_name, :timeout_seconds, cast(:request_defaults as jsonb),
                   cast(:operation_configs as jsonb), cast(:response_mappings as jsonb),
                   :secret_ciphertext
