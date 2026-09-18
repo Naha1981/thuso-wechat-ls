@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useState} from 'react';
-import {adminApi} from '../../lib/admin';
+import {adminApi, clearAdminCsrf, storeAdminCsrf} from '../../lib/admin';
 
 const DEFAULT_REQUEST = {
   model: '{{model}}',
@@ -49,6 +49,7 @@ export default function AdminPage() {
     setChecking(true);
     try {
       await adminApi('/auth/me');
+      if (!window.sessionStorage.getItem('nahaos_admin_csrf')) { setLoggedIn(false); return; }
       setLoggedIn(true);
       await loadConfig();
     } catch (_) {
@@ -88,7 +89,8 @@ export default function AdminPage() {
       const body = authMode === 'login'
         ? {email, password}
         : {bootstrap_token: bootstrapToken, email, password};
-      await adminApi(path, {method:'POST', body:JSON.stringify(body)});
+      const authResult = await adminApi(path, {method:'POST', body:JSON.stringify(body)});
+      storeAdminCsrf(authResult.csrf_token);
       setLoggedIn(true);
       setMessage(authMode === 'login' ? 'Signed in.' : 'Administrator account created.');
       await loadConfig();
@@ -179,6 +181,7 @@ export default function AdminPage() {
 
   async function logout() {
     try { await adminApi('/auth/logout', {method:'POST'}); } catch (_) {}
+    clearAdminCsrf();
     setLoggedIn(false);
   }
 
