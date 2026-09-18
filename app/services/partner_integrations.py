@@ -28,6 +28,7 @@ class PartnerIntegration:
     provider_key: str
     environment: str
     enabled: bool
+    allow_private_network: bool
     base_url: str
     api_spec_url: str | None
     health_endpoint_path: str | None
@@ -134,6 +135,7 @@ def _build(row: dict[str, Any], secrets_map: dict[str, Any]) -> PartnerIntegrati
         provider_key=row["provider_key"],
         environment=row["environment"],
         enabled=bool(row["enabled"]),
+        allow_private_network=bool(row.get("allow_private_network", False)),
         base_url=row["base_url"].rstrip("/"),
         api_spec_url=row.get("api_spec_url"),
         health_endpoint_path=row.get("health_endpoint_path"),
@@ -156,7 +158,7 @@ async def load_active_partner(db: AsyncSession, *, service_domain: str, provider
         params["provider_key"] = provider_key
     row = (await db.execute(text(f"""
         select id, stakeholder_name, stakeholder_type, service_domain, provider_key,
-               environment, enabled, base_url, api_spec_url, health_endpoint_path,
+               environment, enabled, base_url, api_spec_url, health_endpoint_path, allow_private_network,
                auth_scheme, auth_header_name, timeout_seconds, request_defaults,
                operation_configs, response_mappings, secret_ciphertext,
                last_test_status, last_test_operation
@@ -173,7 +175,7 @@ async def load_active_partner(db: AsyncSession, *, service_domain: str, provider
 
 
 async def test_partner(config: PartnerIntegration, operation: str | None = None) -> dict[str, Any]:
-    validate_endpoint(config.base_url, False)
+    validate_endpoint(config.base_url, config.allow_private_network)
     if not operation:
         if config.health_endpoint_path:
             path = config.health_endpoint_path
