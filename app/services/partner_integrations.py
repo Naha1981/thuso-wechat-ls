@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.crypto import SecretCipher
+from app.integrations.universal_adapter import AdapterContext, adapter_for
 
 SECRET_FIELDS = {"api_key", "api_secret", "extra_headers"}
 
@@ -30,6 +31,7 @@ class PartnerIntegration:
     environment: str
     enabled: bool
     allow_private_network: bool
+    adapter_type: str
     base_url: str
     api_spec_url: str | None
     health_endpoint_path: str | None
@@ -39,6 +41,9 @@ class PartnerIntegration:
     request_defaults: dict[str, Any]
     operation_configs: dict[str, Any]
     response_mappings: dict[str, Any]
+    auth_config: dict[str, Any]
+    webhook_config: dict[str, Any]
+    workflow_configs: dict[str, Any]
     secrets: dict[str, Any]
     last_test_status: str | None
     last_test_operation: str | None
@@ -137,6 +142,7 @@ def _build(row: dict[str, Any], secrets_map: dict[str, Any]) -> PartnerIntegrati
         environment=row["environment"],
         enabled=bool(row["enabled"]),
         allow_private_network=bool(row.get("allow_private_network", False)),
+        adapter_type=row.get("adapter_type", "rest_json"),
         base_url=row["base_url"].rstrip("/"),
         api_spec_url=row.get("api_spec_url"),
         health_endpoint_path=row.get("health_endpoint_path"),
@@ -146,6 +152,9 @@ def _build(row: dict[str, Any], secrets_map: dict[str, Any]) -> PartnerIntegrati
         request_defaults=row.get("request_defaults") or {},
         operation_configs=row.get("operation_configs") or {},
         response_mappings=row.get("response_mappings") or {},
+        auth_config=row.get("auth_config") or {},
+        webhook_config=row.get("webhook_config") or {},
+        workflow_configs=row.get("workflow_configs") or {},
         secrets=secrets_map,
         last_test_status=row.get("last_test_status"),
         last_test_operation=row.get("last_test_operation"),
@@ -159,9 +168,9 @@ async def load_active_partner(db: AsyncSession, *, service_domain: str, provider
         params["provider_key"] = provider_key
     row = (await db.execute(text(f"""
         select id, stakeholder_name, stakeholder_type, service_domain, provider_key,
-               environment, enabled, base_url, api_spec_url, health_endpoint_path, allow_private_network,
-               auth_scheme, auth_header_name, timeout_seconds, request_defaults,
-               operation_configs, response_mappings, secret_ciphertext,
+               environment, enabled, allow_private_network, adapter_type, base_url, api_spec_url, health_endpoint_path,
+               auth_scheme, auth_header_name, timeout_seconds, request_defaults, operation_configs,
+               response_mappings, auth_config, webhook_config, workflow_configs, secret_ciphertext,
                last_test_status, last_test_operation
         from partner_integrations
         where service_domain=:service_domain and environment='production' and enabled=true {clause}
@@ -214,42 +223,74 @@ async def execute_partner(config: PartnerIntegration, *, operation: str, trace_i
     definition = config.operation_configs.get(operation)
     if not isinstance(definition, dict):
         raise RuntimeError(f"Partner operation not configured: {operation}")
-    path = normalise_path(definition.get("path"), None)
-    method = str(definition.get("method", "POST")).upper()
-    if not path:
-        raise RuntimeError("Partner operation path is required")
-    variables = {"trace_id": trace_id, "operation": operation, "payload": payload}
-    body = render({**config.request_defaults, **(definition.get("request_template") or {})}, variables)
-    headers = {
-        "Accept": "application/json",
-        "X-NahaOS-Trace-Id": trace_id,
-        "X-NahaOS-Idempotency-Key": trace_id,
-        **auth_headers(config),
-    }
-    async with httpx.AsyncClient(timeout=config.timeout_seconds, follow_redirects=False) as client:
-        for attempt in range(3):
-            try:
-                response = await client.request(
-                    method,
-                    f"{config.base_url}{path}",
-                    json=body if method != "GET" else None,
-                    headers=headers,
-                )
-            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
-                if attempt == 2:
-                    raise RuntimeError("Unable to connect to partner API")
-                await asyncio.sleep(0.25 * (2 ** attempt))
-                continue
-            if response.status_code in {429, 502, 503, 504} and attempt < 2:
-                await asyncio.sleep(0.25 * (2 ** attempt))
-                continue
-            break
-    if response.status_code >= 400:
-        raise RuntimeError(f"Partner API returned HTTP {response.status_code}")
-    data = response.json()
+
+    ctx = AdapterContext(
+        base_url=config.base_url,
+        operation=operation,
+        trace_id=trace_id,
+        timeout_seconds=config.timeout_seconds,
+        request_defaults=config.request_defaults,
+        operation_config=definition,
+        auth_scheme=config.auth_scheme,
+        auth_config=config.auth_config,
+        secrets=config.secrets,
+        allow_private_network=config.allow_private_network,
+    )
+    adapter = adapter_for(config.adapter_type)
+    response = await adapter.execute(ctx, payload)
+
     mapping = config.response_mappings.get(operation) or definition.get("response_mapping") or {}
-    mapped = {key: json_path(data, path_value) for key, path_value in mapping.items()} if mapping else data
-    return mapped, True
+    if mapping:
+        if not isinstance(response.data, (dict, list)):
+            mapped = {"raw": response.raw_text}
+        else:
+            mapped = {key: json_path(response.data, path_value) for key, path_value in mapping.items()}
+    else:
+        mapped = response.data if isinstance(response.data, dict) else {"data": response.data}
+
+    return {
+        **mapped,
+        "_adapter": config.adapter_type,
+        "_status_code": response.status_code,
+    }, True
+
+async def execute_workflow(
+    config: PartnerIntegration,
+    *,
+    workflow_name: str,
+    trace_id: str,
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any], bool]:
+    workflow = config.workflow_configs.get(workflow_name)
+    if not isinstance(workflow, list) or not workflow:
+        raise RuntimeError(f"Partner workflow not configured: {workflow_name}")
+
+    context: dict[str, Any] = {"payload": payload}
+    results: dict[str, Any] = {}
+    for step in workflow:
+        if not isinstance(step, dict):
+            raise RuntimeError("Partner workflow step must be an object")
+        operation = step.get("operation")
+        if not operation:
+            raise RuntimeError("Partner workflow step requires an operation")
+        step_payload = render(step.get("payload_template") or "{{payload}}", {
+            "payload": context.get("payload", payload),
+            "steps": results,
+            "trace_id": trace_id,
+        })
+        if not isinstance(step_payload, dict):
+            raise RuntimeError(f"Workflow step {operation} payload must be an object")
+        result, _ = await execute_partner(
+            config,
+            operation=str(operation),
+            trace_id=trace_id,
+            payload=step_payload,
+        )
+        name = str(step.get("store_as") or operation)
+        results[name] = result
+        context["previous"] = result
+
+    return {"workflow": workflow_name, "steps": results}, True
 
 
 async def discover_openapi(spec_url: str) -> dict[str, Any]:
