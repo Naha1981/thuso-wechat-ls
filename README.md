@@ -119,3 +119,8 @@ NahaOS is designed for unreliable connectivity:
 - Critical financial, identity and other consequential actions are never silently treated as completed while offline; they remain queued/pending until the server confirms execution.
 
 Offline mode is therefore **store-and-forward**, not fake disconnected execution.
+
+
+## Universal stakeholder adapters
+
+NahaOS does not require every partner to reshape its backend into a NahaOS-specific API. The Partner Integration Hub supports built-in adapters for REST/JSON, GraphQL, form-encoded HTTP, SOAP/XML and SFTP/file exchange, with OAuth2 client credentials, API keys, bearer auth, Basic auth, HMAC signing, mTLS, verified webhooks and configurable multi-step workflows. New protocol adapters can be registered behind the same AdapterRegistry without changing citizen-facing workflows.
