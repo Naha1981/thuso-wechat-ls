@@ -45,7 +45,7 @@ def config(**overrides):
 
 def test_auth_and_path_validation():
     assert _auth_headers(config()) == {"Authorization": "Bearer secret"}
-    assert _normalise_path("ai/chat", "/chat") == "/chat"
+    assert _normalise_path("/ai/chat", "/chat") == "/ai/chat"
     with pytest.raises(ValueError):
         _normalise_path("../private", "/chat")
 
