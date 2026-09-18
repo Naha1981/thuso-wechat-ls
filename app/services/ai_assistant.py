@@ -10,7 +10,6 @@ from app.ai.contracts import AIMessage, AIRequest
 from app.ai.gateway import get_runtime_ai_provider
 from app.services.ai_usage import record_ai_usage
 
-
 SYSTEM_PROMPT = """You are the conversational intelligence layer inside NahaOS, a Lesotho digital-services platform.
 You help the user understand what NahaOS can do and what happens next.
 Never claim that a government, payment, telecom, commerce, or other consequential action has completed unless the system explicitly says it has completed.
