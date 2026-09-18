@@ -115,3 +115,7 @@ async def test_template_nested_values():
         "steps": {"quote": {"id": "q1"}},
     })
     assert value == {"id": "c1", "quote": "q1"}
+
+def test_adapter_registry_includes_sftp():
+    from app.integrations.universal_adapter import adapter_for
+    assert adapter_for("sftp_file").name == "sftp_file"
