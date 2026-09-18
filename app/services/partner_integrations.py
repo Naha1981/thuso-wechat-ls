@@ -185,7 +185,7 @@ async def load_active_partner_by_provider_key(db: AsyncSession, *, provider_key:
 async def test_partner(config: PartnerIntegration, operation: str | None = None) -> dict[str, Any]:
     validate_endpoint(config.base_url, config.allow_private_network)
     if not operation:
-        if config.health_endpoint_path:
+        if config.health_endpoint_path and config.adapter_type != "sftp_file":
             path = config.health_endpoint_path
             headers = {"Accept": "application/json", "X-NahaOS-Trace-Id": "nahaos-partner-health-test"}
             async with httpx.AsyncClient(timeout=config.timeout_seconds, follow_redirects=False) as client:
