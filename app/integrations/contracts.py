@@ -12,6 +12,7 @@ class ServiceRequest:
     domain: str
     operation: str
     payload: dict[str, Any] = field(default_factory=dict)
+    provider_key: str | None = None
 
 
 @dataclass(frozen=True)
