@@ -274,6 +274,7 @@ async def save_econet_config(db: AsyncSession, *, admin_id: str, payload: dict[s
             text(
                 """
                 update integration_configs set
+                  enabled=false,
                   base_url=:base_url,
                   chat_endpoint_path=:chat_endpoint_path,
                   health_endpoint_path=:health_endpoint_path,
