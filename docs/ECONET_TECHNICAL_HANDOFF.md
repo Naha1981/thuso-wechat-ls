@@ -1,54 +1,75 @@
 # Econet Technical Handoff
 
-## What Econet needs to provide
+## Production goal
 
-The NahaOS core does not require direct API access during development. For production integration, Econet provides the approved:
+NahaOS is delivered as a complete production integration target. Econet does not need NahaLabs engineers to edit source code to connect the approved AI APIs.
+
+Production flow: Econet credentials + API contract → NahaOS Integration Control Plane → encrypted provider configuration → EconetAIProvider → AIProvider → NahaOS.
+
+## What Econet needs to provide
 
 - API base URL
 - authentication method and credential issuance process
-- OAuth scopes or API permissions
-- model/service identifiers
-- request/response schema
+- API/model/service identifier
+- chat request/response schema
+- health/capability endpoint, when available
 - rate limits
 - timeout/retry rules
-- webhook/event specification
-- error codes
-- sandbox/test credentials
-- production promotion process
+- error semantics
 - data residency/privacy requirements
-- approved transaction/action capabilities
+- approved AI capabilities and usage limits
+- sandbox credentials when available
 
-## What NahaLabs will not guess
+No production source-code modification is required when the API can be represented by the control-plane contract mapping.
 
-No endpoint path, header, scope, payload field, payment status or transaction semantics will be invented. The adapter is implemented from the signed/approved technical contract.
+## How Econet connects itself
 
-## Configuration boundary
+1. Deploy NahaOS and run database migrations, including 036_econet_integration_control_plane.sql.
+2. Configure the server-side SECRETS_ENCRYPTION_KEY.
+3. Configure the one-time ADMIN_BOOTSTRAP_TOKEN.
+4. Open /admin.
+5. Complete first-time administrator setup.
+6. Enter the Econet production API configuration.
+7. Enter credentials. Credentials are encrypted before database persistence and are never returned to the browser.
+8. Save the configuration.
+9. Run Test health or Test AI request.
+10. Activate production only after the test passes.
 
-The deployment environment supplies the partner configuration. Secrets are never stored in GitHub source.
+Activation is reversible. Deactivation returns runtime selection to the NahaOS fallback provider.
 
-Example:
+## Provider contract
 
-`AI_PROVIDER=http`
-`AI_PROVIDER_NAME=econet`
-`AI_BASE_URL=<Econet-approved-base-url>`
-`AI_API_KEY=<secret-store-reference>`
-`AI_MODEL=<Econet-approved-model>`
+AIProvider exposes chat(request), health(), and capabilities().
 
-If Econet uses a non-OpenAI-compatible API, NahaLabs implements an `EconetAIProvider` adapter that translates between the partner schema and the internal `AIProvider` contract. Citizen-facing code does not change.
+Econet-specific mapping is isolated in EconetAIProvider.
 
-## Acceptance test
+The control plane supports configurable request templates and response-path mappings so Econet can map a non-identical JSON contract without changing citizen-facing flows.
 
-Before production, Econet and NahaLabs should jointly execute:
+## Security boundary
 
-1. authentication test
-2. health/capability test
-3. simple AI request
-4. timeout/retry test
-5. rate-limit test
-6. malformed-response test
-7. audit/trace test
-8. data/privacy test
-9. load test
-10. rollback/fallback test
+- API secrets are encrypted with AES-GCM using SECRETS_ENCRYPTION_KEY.
+- Secrets are never returned in API responses.
+- Admin authentication uses server-side sessions with HttpOnly cookies.
+- Mutating admin requests require a session-bound CSRF token.
+- Failed admin logins trigger a temporary account lock after repeated failures.
+- Integration changes, tests, activations and deactivations are audited.
+- Production endpoints require HTTPS.
+- Public endpoint addresses are checked against private/reserved networks unless the administrator explicitly enables private-network mode.
+- Provider errors exposed to callers do not include upstream response bodies or credentials.
+- NahaOS retains deterministic policy/action execution; AI does not directly authorize payments or consequential actions.
 
-Only after these pass is the provider promoted from demo/sandbox to production.
+## Sandbox
+
+The NahaOS Sandbox is a separate deterministic provider. It exists for demonstrations, QA and development.
+
+It does not use Econet credentials and does not block production integration. Production activation happens only through the control plane.
+
+## Commercial traceability
+
+Every AI request can receive a trace ID. AI usage is persisted alongside business outcome events so Econet can measure observed and attributable commercial value without treating estimates as booked revenue.
+
+## Acceptance tests
+
+Before production launch, Econet should execute authentication, health/capability, AI request, timeout/retry, rate-limit, malformed-response, trace/audit, data/privacy, load, and rollback/deactivation checks.
+
+The portal controls Test health, Test AI request, Activate production, and Deactivate production are the operational entry points for these checks.
