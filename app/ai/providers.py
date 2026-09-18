@@ -2,11 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-import httpx
 
 from app.ai.contracts import AIRequest, AIResponse
-from app.core.config import get_settings
-
 
 class DemoAIProvider:
     """Deterministic sandbox provider. It never calls Econet."""
