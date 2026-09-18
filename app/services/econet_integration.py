@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import json
-import socket
 import os
+import socket
 from dataclasses import dataclass
 from typing import Any
 
