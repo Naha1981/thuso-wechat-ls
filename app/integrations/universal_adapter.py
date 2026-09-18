@@ -4,7 +4,9 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 import ssl
+import tempfile
 import time
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -62,14 +64,21 @@ def _build_ssl_context(secrets_map: dict[str, Any]) -> ssl.SSLContext | None:
     context = ssl.create_default_context()
     if ca_pem:
         context.load_verify_locations(cadata=str(ca_pem))
-    cert_path = "/tmp/nahaos-client-cert.pem"
-    key_path = "/tmp/nahaos-client-key.pem"
-    with open(cert_path, "w", encoding="utf-8") as cert_file:
+    cert_file = tempfile.NamedTemporaryFile(mode="w", suffix=".crt.pem", delete=False)
+    key_file = tempfile.NamedTemporaryFile(mode="w", suffix=".key.pem", delete=False)
+    try:
         cert_file.write(str(cert_pem))
-    with open(key_path, "w", encoding="utf-8") as key_file:
+        cert_file.close()
         key_file.write(str(key_pem))
-    context.load_cert_chain(cert_path, key_path)
-    return context
+        key_file.close()
+        context.load_cert_chain(cert_file.name, key_file.name)
+        return context
+    finally:
+        for path in (cert_file.name, key_file.name):
+            try:
+                os.unlink(path)
+            except FileNotFoundError:
+                pass
 
 
 class _AuthBuilder:
