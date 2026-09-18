@@ -25,6 +25,7 @@ SUPPORTED_ADAPTERS = {
     "graphql",
     "form_urlencoded",
     "soap_xml",
+    "sftp_file",
 }
 
 
@@ -371,6 +372,7 @@ class AdapterRegistry:
             "form_urlencoded": FormUrlEncodedAdapter(),
             "graphql": GraphQLAdapter(),
             "soap_xml": SoapXmlAdapter(),
+            "sftp_file": SFTPFileAdapter(),
         }
 
     def register(self, key: str, adapter: PartnerAdapter) -> None:
@@ -387,6 +389,96 @@ class AdapterRegistry:
 
 ADAPTERS = AdapterRegistry()
 
+
+
+
+
+class SFTPFileAdapter:
+    name = "sftp_file"
+
+    async def execute(self, ctx: AdapterContext, payload: dict[str, Any]) -> AdapterResponse:
+        try:
+            import paramiko
+        except ImportError as exc:
+            raise RuntimeError("SFTP adapter dependency is not installed") from exc
+
+        from urllib.parse import urlparse
+
+        parsed = urlparse(ctx.base_url)
+        if parsed.scheme != "sftp" or not parsed.hostname:
+            raise RuntimeError("SFTP adapter requires an sftp:// base URL")
+
+        operation = ctx.operation_config
+        action = str(operation.get("action", "upload")).lower()
+        remote_path = render(operation.get("remote_path", ""), {
+            "payload": payload,
+            "trace_id": ctx.trace_id,
+            "operation": ctx.operation,
+        })
+        if not isinstance(remote_path, str) or not remote_path.startswith("/"):
+            raise RuntimeError("SFTP remote_path must be absolute")
+
+        username = ctx.secrets.get("sftp_username") or parsed.username
+        password = ctx.secrets.get("sftp_password")
+        private_key_pem = ctx.secrets.get("sftp_private_key_pem")
+        known_hosts = ctx.secrets.get("sftp_known_hosts")
+        if not username or not known_hosts:
+            raise RuntimeError("SFTP username and known_hosts are required")
+
+        port = parsed.port or 22
+
+        def transfer():
+            import io
+
+            client = paramiko.SSHClient()
+            client.load_host_keys(io.StringIO(str(known_hosts)))
+            client.set_missing_host_key_policy(paramiko.RejectPolicy())
+            if private_key_pem:
+                pkey = None
+                loaders = [
+                    paramiko.Ed25519Key,
+                    paramiko.ECDSAKey,
+                    paramiko.RSAKey,
+                ]
+                last_error = None
+                for loader in loaders:
+                    try:
+                        pkey = loader.from_private_key(io.StringIO(str(private_key_pem)), password=password or None)
+                        break
+                    except Exception as exc:
+                        last_error = exc
+                if pkey is None:
+                    raise RuntimeError(f"Unable to load SFTP private key: {last_error}")
+                client.connect(parsed.hostname, port=port, username=str(username), pkey=pkey, timeout=ctx.timeout_seconds)
+            else:
+                if not password:
+                    raise RuntimeError("SFTP password is required")
+                client.connect(parsed.hostname, port=port, username=str(username), password=str(password), timeout=ctx.timeout_seconds)
+
+            try:
+                with client.open_sftp() as sftp:
+                    if action == "upload":
+                        content = payload.get("content")
+                        if content is None:
+                            raise RuntimeError("SFTP upload requires payload.content")
+                        raw = content.encode() if isinstance(content, str) else bytes(content)
+                        with sftp.file(remote_path, "wb") as remote:
+                            remote.write(raw)
+                        data = {"action": "upload", "remote_path": remote_path, "bytes": len(raw)}
+                    elif action == "download":
+                        with sftp.file(remote_path, "rb") as remote:
+                            raw = remote.read()
+                        data = {"action": "download", "remote_path": remote_path, "content": base64.b64encode(raw).decode()}
+                    elif action == "list":
+                        data = {"action": "list", "remote_path": remote_path, "files": sftp.listdir(remote_path)}
+                    else:
+                        raise RuntimeError(f"Unsupported SFTP action: {action}")
+            finally:
+                client.close()
+            return data
+
+        result = await __import__("asyncio").to_thread(transfer)
+        return AdapterResponse(200, {}, result, json.dumps(result))
 
 def adapter_for(adapter_type: str) -> PartnerAdapter:
     return ADAPTERS.get(adapter_type)
