@@ -63,8 +63,8 @@ class Settings(BaseSettings):
     admin_session_ttl_hours: int = 12
     admin_cookie_name: str = "nahaos_admin_session"
     admin_csrf_cookie_name: str = "nahaos_admin_csrf"
-    admin_cookie_secure: bool = False
-    admin_cookie_samesite: str = "lax"
+    admin_cookie_secure: bool = True
+    admin_cookie_samesite: str = "none"
     cors_allowed_origins: str = ""
 
 @lru_cache
