@@ -15,7 +15,7 @@ from xml.etree import ElementTree as ET
 
 import httpx
 
-from app.services.partner_integrations import json_path, render
+from app.services.template_engine import json_path, render
 
 
 SUPPORTED_ADAPTERS = {
