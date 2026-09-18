@@ -90,3 +90,18 @@ Offline mode means resilient operation, not pretending that an external transact
 
 ## Activation gate
 A partner is never switched live merely because its hostname responds. At least one real business/service operation must pass through the configured contract before activation.
+
+
+## Built-in adapter families
+
+Stakeholders do not need to reshape their systems to look like a NahaOS REST API. The onboarding contract can select:
+
+- REST / JSON
+- GraphQL
+- form-encoded HTTP
+- SOAP / XML
+- SFTP / file exchange
+
+Authentication/signing options include bearer tokens, API keys, Basic auth, OAuth2 client credentials, HMAC-SHA256 signing and mTLS. Inbound webhook verification is supported separately.
+
+For workflows that span multiple partner operations, NahaOS can execute configured steps with trace propagation and optional compensation operations. A partner can therefore keep its existing backend semantics while NahaOS presents one consistent citizen experience.
