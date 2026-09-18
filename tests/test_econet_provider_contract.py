@@ -133,3 +133,18 @@ async def test_econet_provider_passes_trace_and_metadata(monkeypatch):
 
     assert captured["trace_id"] == trace_id
     assert captured["path"] == "/ai/chat"
+
+@pytest.mark.asyncio
+async def test_econet_provider_uses_configured_model_when_partner_omits_model(monkeypatch):
+    async def fake_request(*args, **kwargs):
+        return httpx.Response(
+            200,
+            json={"output": {"text": "OK"}, "usage": {}},
+            request=httpx.Request("POST", "https://econet.example/ai/chat"),
+        )
+
+    monkeypatch.setattr("app.services.econet_integration._request", fake_request)
+    result = await EconetAIProvider(config=config()).chat(
+        AIRequest(messages=[AIMessage(role="user", content="Hello")])
+    )
+    assert result.model == "caimex"
