@@ -394,6 +394,52 @@ async def deactivate_econet(admin=Depends(require_admin_write), db: AsyncSession
     return {"ok": True, "active_provider": "demo"}
 
 
+@router.get("/outcomes")
+async def outcomes(
+    days: int = 30,
+    admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    days = max(1, min(days, 365))
+    totals = (
+        await db.execute(
+            text(
+                """
+                select count(*) as events, count(distinct trace_id) as traces,
+                       count(distinct user_id) as users,
+                       coalesce(sum(case when amount is not null then amount else 0 end), 0) as amount
+                from business_outcome_events
+                where occurred_at >= now() - (:days * interval '1 day')
+                """
+            ),
+            {"days": days},
+        )
+    ).mappings().one()
+    rows = (
+        await db.execute(
+            text(
+                """
+                select provider, outcome_type, status, count(*) as events,
+                       count(distinct trace_id) as traces,
+                       coalesce(sum(case when amount is not null then amount else 0 end), 0) as amount,
+                       max(currency) as currency
+                from business_outcome_events
+                where occurred_at >= now() - (:days * interval '1 day')
+                group by provider, outcome_type, status
+                order by events desc
+                """
+            ),
+            {"days": days},
+        )
+    ).mappings().all()
+    return {
+        "window_days": days,
+        "totals": dict(totals),
+        "breakdown": [dict(row) for row in rows],
+        "measurement_note": "Amounts are recorded outcomes, not automatically booked revenue. Estimated values must be explicitly labelled in event metadata.",
+    }
+
+
 @router.get("/audit")
 async def audit(limit: int = 50, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
     limit = max(1, min(limit, 200))
