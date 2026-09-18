@@ -56,7 +56,7 @@ def hash_token(token: str) -> str:
 
 def validate_endpoint(base_url: str, allow_private_network: bool = False) -> None:
     parsed = httpx.URL(base_url)
-    if parsed.scheme not in {"https", "http"} or not parsed.host:
+    if parsed.scheme not in {"https", "http", "sftp"} or not parsed.host:
         raise ValueError("base URL must be a valid HTTP(S) URL")
     if parsed.scheme == "http" and get_settings().app_env.lower() in {"prod", "production"}:
         raise ValueError("Production partner endpoints must use HTTPS")
