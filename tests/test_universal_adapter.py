@@ -139,7 +139,7 @@ async def test_soap_xml_adapter():
 @pytest.mark.asyncio
 @respx.mock
 async def test_oauth2_client_credentials_adapter():
-    token_route = respx.post("https://auth.example/token").mock(
+    token_route = respx.post("http://127.0.0.1/token").mock(
         return_value=httpx.Response(
             200,
             json={"access_token": "access-123", "expires_in": 300},
@@ -151,11 +151,23 @@ async def test_oauth2_client_credentials_adapter():
     context = ctx(
         auth_scheme="oauth2_client_credentials",
         auth_config={
-            "token_url": "https://auth.example/token",
+            "token_url": "http://127.0.0.1/token",
             "client_id": "client-1",
             "scope": "payments",
         },
         secrets={"client_secret": "secret"},
+    )
+    context = AdapterContext(
+        base_url=context.base_url,
+        operation=context.operation,
+        trace_id=context.trace_id,
+        timeout_seconds=context.timeout_seconds,
+        request_defaults=context.request_defaults,
+        operation_config=context.operation_config,
+        auth_scheme=context.auth_scheme,
+        auth_config=context.auth_config,
+        secrets=context.secrets,
+        allow_private_network=True,
     )
     result = await RestJsonAdapter().execute(context, {"amount": 5})
     assert token_route.called
