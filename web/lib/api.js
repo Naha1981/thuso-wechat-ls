@@ -21,12 +21,13 @@ function loadCache(path) {
 
 export async function api(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
+  const offlineCache = options.offlineCache === true;
   const headers = {'Content-Type': 'application/json', ...(options.headers || {})};
   const token = typeof window !== 'undefined' ? window.localStorage.getItem('thuso_session') : null;
   if (token) headers.Authorization = 'Bearer ' + token;
 
   if (typeof window !== 'undefined' && !navigator.onLine) {
-    if (method === 'GET') {
+    if (method === 'GET' && offlineCache) {
       const cached = loadCache(path);
       if (cached !== null) return {...cached, _offline: true};
     }
@@ -52,10 +53,10 @@ export async function api(path, options = {}) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.detail || data.message || 'Request failed (' + response.status + ')');
-    if (method === 'GET') saveCache(path, data);
+    if (method === 'GET' && offlineCache) saveCache(path, data);
     return data;
   } catch (error) {
-    if (method === 'GET') {
+    if (method === 'GET' && offlineCache) {
       const cached = loadCache(path);
       if (cached !== null) return {...cached, _offline: true};
     }
