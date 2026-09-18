@@ -36,6 +36,9 @@ async def generate_agent_reply(
     context: dict[str, Any],
 ) -> str:
     provider = await get_runtime_ai_provider(db)
+    if provider.name == "demo":
+        return deterministic_reply
+
     context_payload = {
         "deterministic_intent": intent_name,
         "confidence": confidence,
