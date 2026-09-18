@@ -62,7 +62,7 @@ async def test_graphql_adapter():
 @respx.mock
 async def test_form_urlencoded_adapter():
     route = respx.post("https://partner.example/demo").mock(return_value=httpx.Response(200, json={"accepted": True}))
-    result = await FormUrlEncodedAdapter().execute(ctx(operation_config={"path": "/demo", "request_template": {"name": "{{payload.name}}", "amount": "{{payload.amount}}"}},), {"name": "A", "amount": 50})
+    result = await FormUrlEncodedAdapter().execute(ctx(operation_config={"path": "/demo", "request_template": {"name": "{{payload.name}}", "amount": "{{payload.amount}}"}}), {"name": "A", "amount": 50})
     assert route.called
     assert b"name=A" in route.calls[0].request.content
     assert result.data["accepted"] is True
