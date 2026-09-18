@@ -5,6 +5,8 @@ import hashlib
 import hmac
 import json
 import os
+import ipaddress
+import socket
 import ssl
 import tempfile
 import time
@@ -81,6 +83,24 @@ def _build_ssl_context(secrets_map: dict[str, Any]) -> ssl.SSLContext | None:
                 pass
 
 
+
+def _validate_remote_url(url: str, allow_private_network: bool) -> None:
+    parsed = httpx.URL(url)
+    if parsed.scheme not in {"https", "http"} or not parsed.host:
+        raise ValueError("remote URL must be a valid HTTP(S) URL")
+    if allow_private_network:
+        return
+    addresses = socket.getaddrinfo(
+        parsed.host,
+        parsed.port or (443 if parsed.scheme == "https" else 80),
+        type=socket.SOCK_STREAM,
+    )
+    for address in addresses:
+        ip = ipaddress.ip_address(address[4][0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            raise ValueError("remote endpoint resolves to a private/reserved network")
+
+
 class _AuthBuilder:
     token_cache: dict[str, tuple[str, float]] = {}
 
@@ -133,6 +153,7 @@ class _AuthBuilder:
 
         if scheme == "oauth2_client_credentials":
             token_url = config.get("token_url")
+            _validate_remote_url(str(token_url), ctx.allow_private_network)
             client_id = config.get("client_id")
             client_secret = secrets_map.get("client_secret")
             if not token_url or not client_id or not client_secret:
@@ -343,14 +364,29 @@ def _element_to_dict(element: ET.Element) -> Any:
     return result
 
 
+class AdapterRegistry:
+    def __init__(self) -> None:
+        self._adapters: dict[str, PartnerAdapter] = {
+            "rest_json": RestJsonAdapter(),
+            "form_urlencoded": FormUrlEncodedAdapter(),
+            "graphql": GraphQLAdapter(),
+            "soap_xml": SoapXmlAdapter(),
+        }
+
+    def register(self, key: str, adapter: PartnerAdapter) -> None:
+        if not key or key in self._adapters:
+            raise ValueError("adapter key must be non-empty and unique")
+        self._adapters[key] = adapter
+
+    def get(self, key: str) -> PartnerAdapter:
+        try:
+            return self._adapters[key]
+        except KeyError as exc:
+            raise RuntimeError(f"Unsupported partner adapter: {key}") from exc
+
+
+ADAPTERS = AdapterRegistry()
+
+
 def adapter_for(adapter_type: str) -> PartnerAdapter:
-    adapters: dict[str, PartnerAdapter] = {
-        "rest_json": RestJsonAdapter(),
-        "form_urlencoded": FormUrlEncodedAdapter(),
-        "graphql": GraphQLAdapter(),
-        "soap_xml": SoapXmlAdapter(),
-    }
-    try:
-        return adapters[adapter_type]
-    except KeyError as exc:
-        raise RuntimeError(f"Unsupported partner adapter: {adapter_type}") from exc
+    return ADAPTERS.get(adapter_type)
