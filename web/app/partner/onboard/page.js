@@ -21,7 +21,7 @@ async function call(path, token, options = {}) {
 const empty = {
   provider_key: '', base_url: '', adapter_type: 'rest_json', api_spec_url: '', health_endpoint_path: '/health',
   auth_scheme: 'bearer', auth_header_name: 'Authorization', auth_config: '{}', timeout_seconds: 30,
-  api_key: '', api_secret: '', hmac_secret: '', client_secret: '', client_cert_pem: '', client_key_pem: '', ca_bundle_pem: '', extra_headers: '{}', allow_private_network: false,
+  api_key: '', api_secret: '', hmac_secret: '', client_secret: '', client_cert_pem: '', client_key_pem: '', ca_bundle_pem: '', sftp_username: '', sftp_password: '', sftp_private_key_pem: '', sftp_known_hosts: '', extra_headers: '{}', allow_private_network: false,
   request_defaults: '{}', operation_configs: '{}', response_mappings: '{}',
   webhook_config: '{}', workflow_configs: '{}',
 };
@@ -64,6 +64,10 @@ export default function PartnerOnboardPage() {
             client_cert_pem: '',
             client_key_pem: '',
             ca_bundle_pem: '',
+            sftp_username: '',
+            sftp_password: '',
+            sftp_private_key_pem: '',
+            sftp_known_hosts: '',
             extra_headers: '{}',
             auth_config: JSON.stringify(data.integration.auth_config || {}, null, 2),
             webhook_config: JSON.stringify(data.integration.webhook_config || {}, null, 2),
@@ -151,11 +155,11 @@ export default function PartnerOnboardPage() {
         <label>Provider key<input value={form.provider_key} onChange={e=>update('provider_key',e.target.value)} placeholder="e.g. ministry-health-v1" /></label>
         <label>Base URL<input value={form.base_url} onChange={e=>update('base_url',e.target.value)} placeholder="https://api.example.org" /></label>
         <label>Protocol adapter<select value={form.adapter_type} onChange={e=>update('adapter_type',e.target.value)}>
-          <option value="rest_json">REST / JSON</option><option value="graphql">GraphQL</option><option value="form_urlencoded">Form / legacy HTTP</option><option value="soap_xml">SOAP / XML</option>
+          <option value="rest_json">REST / JSON</option><option value="graphql">GraphQL</option><option value="form_urlencoded">Form / legacy HTTP</option><option value="soap_xml">SOAP / XML</option><option value="sftp_file">SFTP / file exchange</option>
         </select></label>
         <label>OpenAPI URL (optional)<input value={form.api_spec_url || ''} onChange={e=>update('api_spec_url',e.target.value)} placeholder="https://api.example.org/openapi.json" /></label>
         <label>Health endpoint<input value={form.health_endpoint_path || ''} onChange={e=>update('health_endpoint_path',e.target.value)} placeholder="/health" /></label>
-        <label>Authentication<select value={form.auth_scheme} onChange={e=>update('auth_scheme',e.target.value)}><option value="bearer">Bearer token</option><option value="api-key">API key</option><option value="basic">Basic</option><option value="oauth2_client_credentials">OAuth2 client credentials</option><option value="hmac_sha256">HMAC-SHA256 signing</option><option value="mtls">mTLS certificates</option><option value="custom">Custom headers</option><option value="none">None</option></select></label>
+        <label>Authentication<select value={form.auth_scheme} onChange={e=>update('auth_scheme',e.target.value)}><option value="bearer">Bearer token</option><option value="api-key">API key</option><option value="basic">Basic</option><option value="oauth2_client_credentials">OAuth2 client credentials</option><option value="hmac_sha256">HMAC-SHA256 signing</option><option value="mtls">mTLS certificates</option><option value="sftp_password">SFTP password</option><option value="sftp_private_key">SFTP private key</option><option value="custom">Custom headers</option><option value="none">None</option></select></label>
         <label>API header<input value={form.auth_header_name} onChange={e=>update('auth_header_name',e.target.value)} /></label>
         <label>API key / username<input type="password" value={form.api_key} onChange={e=>update('api_key',e.target.value)} placeholder="Stored encrypted" /></label>
         {form.auth_scheme === 'basic' && <label>Password / secret<input type="password" value={form.api_secret} onChange={e=>update('api_secret',e.target.value)} /></label>}
@@ -164,6 +168,10 @@ export default function PartnerOnboardPage() {
         {form.auth_scheme === 'mtls' && <label className="wide">Client certificate PEM<textarea rows="5" value={form.client_cert_pem} onChange={e=>update('client_cert_pem',e.target.value)} /></label>}
         {form.auth_scheme === 'mtls' && <label className="wide">Client private key PEM<textarea rows="5" value={form.client_key_pem} onChange={e=>update('client_key_pem',e.target.value)} /></label>}
         {form.auth_scheme === 'mtls' && <label className="wide">CA bundle PEM (optional)<textarea rows="4" value={form.ca_bundle_pem} onChange={e=>update('ca_bundle_pem',e.target.value)} /></label>}
+        {form.adapter_type === 'sftp_file' && <label>SFTP username<input value={form.sftp_username || ''} onChange={e=>update('sftp_username',e.target.value)} /></label>}
+        {form.adapter_type === 'sftp_file' && form.auth_scheme === 'sftp_password' && <label>SFTP password<input type="password" value={form.sftp_password || ''} onChange={e=>update('sftp_password',e.target.value)} /></label>}
+        {form.adapter_type === 'sftp_file' && form.auth_scheme === 'sftp_private_key' && <label className="wide">SFTP private key PEM<textarea rows="5" value={form.sftp_private_key_pem || ''} onChange={e=>update('sftp_private_key_pem',e.target.value)} /></label>}
+        {form.adapter_type === 'sftp_file' && <label className="wide">SSH known_hosts entry<textarea rows="4" value={form.sftp_known_hosts || ''} onChange={e=>update('sftp_known_hosts',e.target.value)} /></label>}
         {form.auth_scheme === 'custom' && <label className="wide">Secret headers JSON<textarea rows="3" value={form.extra_headers} onChange={e=>update('extra_headers',e.target.value)} /></label>}
         <label>Timeout (seconds)<input type="number" min="5" max="180" value={form.timeout_seconds} onChange={e=>update('timeout_seconds',e.target.value)} /></label>
       </div>
