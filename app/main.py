@@ -31,6 +31,7 @@ from app.api.whatsapp_ops import router as whatsapp_ops_router
 from app.api.ai import router as ai_router
 from app.api.capabilities import router as capabilities_router
 from app.api.partner import router as partner_router
+from app.api.partner_webhooks import router as partner_webhooks_router
 from app.api.admin import router as admin_router
 from app.core.startup import validate_startup_configuration
 
@@ -53,6 +54,7 @@ app.include_router(agent_router, prefix=settings.api_prefix)
 app.include_router(ai_router, prefix=settings.api_prefix)
 app.include_router(capabilities_router, prefix=settings.api_prefix)
 app.include_router(partner_router, prefix=settings.api_prefix)
+app.include_router(partner_webhooks_router, prefix=settings.api_prefix)
 app.include_router(admin_router, prefix=settings.api_prefix)
 app.include_router(provider_router, prefix=settings.api_prefix)
 app.include_router(dispatch_router, prefix=settings.api_prefix)
