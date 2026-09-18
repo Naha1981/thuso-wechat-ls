@@ -29,7 +29,17 @@ GET `/api/v1/ai/provider`
 
 POST `/api/v1/ai/chat`
 
-Configuration defaults to demo mode. Use `AI_PROVIDER=http` only after the partner API contract is known.
+Configuration defaults to demo mode. For the Econet adapter use `AI_PROVIDER=econet` and supply only the credentials/endpoint values provided by Econet.
+
+The runtime boundary is intentionally fixed:
+
+```text
+EconetAIProvider → AIProvider → NahaOS
+```
+
+NahaOS does not import or depend on Econet-specific SDKs. When Econet changes its API schema, only the adapter mapping changes.
+
+AI chat is authenticated through the existing NahaOS session layer and successful calls are recorded in `ai_usage_events` with a trace ID.
 
 ## Monetization proof
 
