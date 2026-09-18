@@ -4,6 +4,7 @@ from typing import Any
 
 from app.ai.contracts import AIRequest, AIResponse
 
+
 class DemoAIProvider:
     """Deterministic sandbox provider. It never calls Econet."""
 
