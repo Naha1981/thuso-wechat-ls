@@ -44,3 +44,9 @@ async def test_gateway_can_resolve_unregistered_domain_through_default_provider(
     gateway = ServiceGateway(default_provider=FakeDefaultProvider())
     result = await gateway.execute(ServiceRequest(trace_id=uuid4(), user_id=uuid4(), domain="health", operation="status"))
     assert result.provider == "default"
+
+def test_runtime_gateway_uses_partner_hub_fallback():
+    import app.services.service_gateway as gateway_module
+    class DummyDB: pass
+    gateway = gateway_module.build_runtime_gateway(DummyDB())
+    assert gateway.provider_for("health").name == "partner-http"
