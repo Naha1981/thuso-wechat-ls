@@ -25,7 +25,7 @@ class CPayLesotho(GenericLesothoGateway):
     def __init__(self, **kw): super().__init__(name='cpay_ls', channels=('cpay',), **kw)
 
 class SmartelMoneyLesotho(GenericLesothoGateway):
-    def __init__(self, **kw): super().__init__(name='smartel_money_ls', channels=('mywallet',), **kw)
+    def __init__(self, **kw): super().__init__(name='smartel_money_ls', channels=('smartel_money','mywallet'), **kw)
 
 class ChaperoneMoneyLesotho(GenericLesothoGateway):
     def __init__(self, **kw): super().__init__(name='chaperone_ls', channels=('cpay',), **kw)
