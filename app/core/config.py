@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     kie_timeout_seconds: int = 90
     intelligence_max_output_chars: int = 12000
     intelligence_auto_reply: bool = False
+    ai_provider: str = "demo"
+    ai_provider_name: str = "partner-ai"
+    ai_base_url: str = ""
+    ai_api_key: str = ""
+    ai_model: str = "default"
+    ai_timeout_seconds: int = 60
 
 @lru_cache
 def get_settings() -> Settings:
