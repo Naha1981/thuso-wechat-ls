@@ -2,6 +2,13 @@ const DB_NAME = 'nahaos-offline';
 const STORE = 'outbox';
 const VERSION = 1;
 
+async function fingerprintToken(token) {
+  if (!token || !globalThis.crypto?.subtle) return '';
+  const bytes = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function openDb() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, VERSION);
@@ -16,7 +23,8 @@ function openDb() {
   });
 }
 
-export async function queueOfflineRequest({url, method = 'POST', body, headers = {}, idempotencyKey}) {
+export async function queueOfflineRequest({url, method = 'POST', body, headers = {}, idempotencyKey, sessionToken}) {
+  const sessionFingerprint = await fingerprintToken(sessionToken);
   const db = await openDb();
   const safeHeaders = {...headers};
   delete safeHeaders.Authorization;
@@ -28,6 +36,7 @@ export async function queueOfflineRequest({url, method = 'POST', body, headers =
     body,
     headers: safeHeaders,
     idempotencyKey: idempotencyKey || crypto.randomUUID(),
+    sessionFingerprint,
     queuedAt: new Date().toISOString(),
   };
   await new Promise((resolve, reject) => {
@@ -43,9 +52,12 @@ export async function flushOfflineQueue() {
   if (!navigator.onLine) return {sent: 0, remaining: await countQueued()};
   const db = await openDb();
   const items = await allQueued(db);
+  const currentToken = typeof window !== 'undefined' ? window.localStorage.getItem('thuso_session') : null;
+  const currentFingerprint = await fingerprintToken(currentToken);
   let sent = 0;
 
   for (const item of items) {
+    if (item.sessionFingerprint && item.sessionFingerprint !== currentFingerprint) continue;
     try {
       const currentToken = typeof window !== 'undefined' ? window.localStorage.getItem('thuso_session') : null;
       const headers = {
