@@ -70,3 +70,26 @@ The existing journey remains available: FOOD → merchant → menu → cart → 
 Run pytest -q tests/test_ai_gateway.py tests/test_control_plane.py, ruff check app tests, python -m compileall app tests, npm run build in web/, and npm run typecheck in operator/.
 
 External provider, WhatsApp, Supabase and payment integrations require their respective credentials/contracts and are intentionally not fabricated.
+
+## NahaOS Economic OS modules
+
+NahaOS now treats the former standalone product ideas as modules of one Lesotho platform:
+
+- **SkyPay / SME Business:** merchant identity, POS, sales, inventory, expenses and financial visibility.
+- **Ramalaisha:** diaspora-to-family grocery and retail fulfilment, retailer preparation, OTP pickup/delivery and backorders.
+- **AegisGrid:** fraud, risk, anomaly and credit decision-support signals.
+- **Credit & Lending:** eligibility, applications, stock finance and repayment workflows.
+- **Tax + Cross-Border Trade:** VAT classification, reporting, customs-ready manifests and anomaly detection.
+- **Agriculture:** farmer services, inputs, markets, yield intelligence and supply forecasting.
+- **Financial Literacy:** WhatsApp-first money lessons and personalised business/household guidance.
+- **Shopping + Transport + Travel + Telecom:** a single commerce/service doorway for purchases, rides, travel and supported telecom actions.
+
+The machine-readable catalogue is available at `GET /api/v1/capabilities`.
+
+### One app, one identity, many services
+
+The intended user experience is conversational:
+
+`order food` → `request a ride` → `send groceries to family` → `buy airtime` → `check a loan workflow` → `file a tax/service request`.
+
+NahaOS decides which safe workflow and service adapter to invoke. External providers remain behind integration boundaries and must be supplied with approved contracts/credentials before production execution is enabled.
