@@ -15,7 +15,7 @@ class DatabaseHTTPServiceProvider:
         return {"status": "ready", "provider": self.name}
 
     async def execute(self, request: ServiceRequest) -> ServiceResult:
-        config = await load_active_partner(self.db, service_domain=request.domain)
+        config = await load_active_partner(self.db, service_domain=request.domain, provider_key=request.provider_key)
         if not config:
             raise LookupError(f"no active partner integration for {request.domain}")
         data, observed = await execute_partner(
