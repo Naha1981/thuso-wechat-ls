@@ -335,7 +335,7 @@ async def test_econet(
     except Exception as exc:
         await db.execute(
             text(
-                "update integration_configs set last_test_at=now(), last_test_status='failed', last_test_error=:error where id=:id"
+                "update integration_configs set last_test_at=now(), last_test_status='failed', last_test_kind=:kind, last_test_error=:error where id=:id"
             ),
             {"id": config.id, "kind": "chat" if body.smoke_chat else "health", "error": str(exc)[:500]},
         )
