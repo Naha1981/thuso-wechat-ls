@@ -28,3 +28,19 @@ def test_gateway_requires_explicit_provider():
     gateway = ServiceGateway()
     with pytest.raises(LookupError):
         gateway.provider_for("government")
+
+class FakeDefaultProvider:
+    name = "default"
+
+    async def health(self):
+        return {"status": "ok"}
+
+    async def execute(self, request):
+        from app.integrations.contracts import ServiceResult
+        return ServiceResult(provider=self.name, status="executed", data={"domain": request.domain}, observed=True)
+
+@pytest.mark.asyncio
+async def test_gateway_can_resolve_unregistered_domain_through_default_provider():
+    gateway = ServiceGateway(default_provider=FakeDefaultProvider())
+    result = await gateway.execute(ServiceRequest(trace_id=uuid4(), user_id=uuid4(), domain="health", operation="status"))
+    assert result.provider == "default"
