@@ -47,6 +47,7 @@ create table if not exists public.integration_configs (
   last_test_status varchar(30),
   last_test_error text,
   version integer not null default 1,
+  allow_private_network boolean not null default false,
   created_by uuid references public.admin_users(id),
   updated_by uuid references public.admin_users(id),
   created_at timestamptz not null default now(),
