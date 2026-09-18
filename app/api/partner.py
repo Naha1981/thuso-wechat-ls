@@ -112,6 +112,21 @@ async def _saved(db: AsyncSession, invite_id: str):
     return _build(dict(row), secrets_map), secrets_map
 
 
+def _redact_public(value):
+    if isinstance(value, dict):
+        result = {}
+        for key, item in value.items():
+            lowered = str(key).lower()
+            if any(word in lowered for word in ("secret", "password", "token", "authorization", "api_key", "private_key")):
+                result[key] = "[REDACTED]"
+            else:
+                result[key] = _redact_public(item)
+        return result
+    if isinstance(value, list):
+        return [_redact_public(item) for item in value]
+    return value
+
+
 def _public(config, secrets_map):
     if not config:
         return {"configured": False, "enabled": False, "secret_configured": False}
@@ -135,11 +150,11 @@ def _public(config, secrets_map):
         "auth_scheme": config.auth_scheme,
         "auth_config": safe_auth_config,
         "timeout_seconds": config.timeout_seconds,
-        "request_defaults": config.request_defaults,
-        "operation_configs": config.operation_configs,
-        "response_mappings": config.response_mappings,
-        "webhook_config": config.webhook_config,
-        "workflow_configs": config.workflow_configs,
+        "request_defaults": _redact_public(config.request_defaults),
+        "operation_configs": _redact_public(config.operation_configs),
+        "response_mappings": _redact_public(config.response_mappings),
+        "webhook_config": _redact_public(config.webhook_config),
+        "workflow_configs": _redact_public(config.workflow_configs),
         "secret_configured": bool(secrets_map),
         "last_test_status": config.last_test_status,
         "last_test_operation": config.last_test_operation,
@@ -175,6 +190,9 @@ async def save(
         json.dumps(body.request_defaults)
         json.dumps(body.operation_configs)
         json.dumps(body.response_mappings)
+        json.dumps(body.auth_config)
+        json.dumps(body.webhook_config)
+        json.dumps(body.workflow_configs)
     except TypeError as exc:
         raise HTTPException(422, "Integration mapping must be valid JSON") from exc
 
