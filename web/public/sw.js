@@ -15,6 +15,7 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;
 
   event.respondWith(
     caches.match(req).then(cached => cached || fetch(req).then(response => {
