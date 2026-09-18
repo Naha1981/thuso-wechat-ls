@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import hmac
 import json
-from datetime import UTC, datetime
+import secrets
+from datetime import UTC, datetime, timedelta
 
 from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -25,6 +26,7 @@ from app.services.econet_integration import (
     save_econet_config,
     test_econet_config,
 )
+from app.services.partner_integrations import hash_token
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -409,10 +411,6 @@ async def create_partner_invite(
     admin=Depends(require_admin_write),
     db: AsyncSession = Depends(get_db),
 ):
-    import secrets
-    from datetime import timedelta
-    from app.services.partner_integrations import hash_token
-
     raw_token = secrets.token_urlsafe(32)
     expires_at = datetime.now(UTC) + timedelta(hours=body.expires_hours)
     invite_id = (
