@@ -62,8 +62,8 @@ class Settings(BaseSettings):
     admin_bootstrap_token: str = ""
     admin_session_ttl_hours: int = 12
     admin_cookie_name: str = "nahaos_admin_session"
-    admin_cookie_secure: bool = True
-    admin_cookie_samesite: str = "none"
+    admin_cookie_secure: bool = False
+    admin_cookie_samesite: str = "lax"
     cors_allowed_origins: str = ""
 
 @lru_cache
