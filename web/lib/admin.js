@@ -1,9 +1,16 @@
 import {API_BASE} from './api';
 
 function csrfToken() {
-  if (typeof document === 'undefined') return '';
-  const match = document.cookie.match(/(?:^|; )nahaos_admin_csrf=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : '';
+  if (typeof window === 'undefined') return '';
+  return window.sessionStorage.getItem('nahaos_admin_csrf') || '';
+}
+
+export function storeAdminCsrf(token) {
+  if (typeof window !== 'undefined' && token) window.sessionStorage.setItem('nahaos_admin_csrf', token);
+}
+
+export function clearAdminCsrf() {
+  if (typeof window !== 'undefined') window.sessionStorage.removeItem('nahaos_admin_csrf');
 }
 
 export async function adminApi(path, options = {}) {
