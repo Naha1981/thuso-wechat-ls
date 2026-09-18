@@ -14,3 +14,6 @@ def test_loan_request_routes_to_credit():
 
 def test_airtime_request_routes_to_telecom():
     assert classify("buy airtime").name == IntentName.TELECOM
+
+def test_generic_business_request_routes_to_business():
+    assert classify("help me manage my spaza").name == IntentName.BUSINESS
