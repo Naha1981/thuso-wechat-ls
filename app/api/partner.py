@@ -67,6 +67,8 @@ async def _invite(db: AsyncSession, token: str):
     ).mappings().first()
     if not row:
         raise HTTPException(401, "Invalid onboarding token")
+    if row["consumed_at"] is not None:
+        raise HTTPException(410, "Onboarding link has already been used")
     if row["expires_at"] <= datetime.now(UTC):
         raise HTTPException(410, "Onboarding link has expired")
     return row
@@ -295,7 +297,7 @@ async def activate(
         raise HTTPException(404, "Integration has not been configured")
     if config.last_test_status != "passed":
         raise HTTPException(409, "Run and pass an integration test before activation")
-    await db.execute(text("update partner_integrations set enabled=false where service_domain=:domain"), {"domain": config.service_domain})
+    await db.execute(text("update partner_integrations set enabled=false where service_domain=:domain and environment='production'"), {"domain": config.service_domain})
     await db.execute(text("update partner_integrations set enabled=true,updated_at=now() where id=:id"), {"id": config.id})
     await db.execute(text("update partner_invites set consumed_at=now() where id=:id"), {"id": invite["id"]})
     await db.commit()
