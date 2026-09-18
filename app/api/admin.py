@@ -68,7 +68,6 @@ def _normalise_email(email: str) -> str:
 
 
 def _cookie(response: Response, name: str, value: str, max_age: int, *, httponly: bool) -> None:
-    settings = get_settings()
     secure, samesite = session_cookie_settings()
     response.set_cookie(
         name,
