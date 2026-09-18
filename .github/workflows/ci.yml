@@ -13,11 +13,39 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install dependencies
+      - name: Install backend dependencies
         run: python -m pip install -e ".[test]"
-      - name: Compile
-        run: python -m compileall app
-      - name: Lint
-        run: ruff check .
-      - name: Unit tests
-        run: pytest -q tests/test_ai_gateway.py
+      - name: Compile backend
+        run: python -m compileall app tests
+      - name: Lint backend
+        run: ruff check app tests
+      - name: Backend tests
+        run: pytest -q tests/test_ai_gateway.py tests/test_control_plane.py
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install web dependencies
+        working-directory: web
+        run: npm install --no-audit --no-fund
+      - name: Build web
+        working-directory: web
+        run: npm run build
+
+  operator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install operator dependencies
+        working-directory: operator
+        run: npm install --no-audit --no-fund
+      - name: Typecheck operator
+        working-directory: operator
+        run: npm run typecheck
