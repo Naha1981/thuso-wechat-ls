@@ -196,7 +196,7 @@ async def load_active_econet_config(db: AsyncSession) -> EconetIntegration | Non
                 select id, environment, enabled, allow_private_network, base_url,
                        chat_endpoint_path, health_endpoint_path, auth_scheme,
                        auth_header_name, model, timeout_seconds, request_template,
-                       response_mapping, secret_ciphertext, last_test_status, last_test_at
+                       response_mapping, secret_ciphertext, last_test_status, last_test_kind, last_test_at
                 from integration_configs
                 where provider='econet-ai' and environment='production' and enabled=true
                 limit 1
