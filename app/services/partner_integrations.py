@@ -184,6 +184,30 @@ async def load_active_partner(db: AsyncSession, *, service_domain: str, provider
     return _build(dict(row), secrets_map)
 
 
+async def load_active_partner_by_provider_key(db: AsyncSession, *, provider_key: str) -> PartnerIntegration | None:
+    row = (
+        await db.execute(
+            text("""
+                select id, stakeholder_name, stakeholder_type, service_domain, provider_key,
+                       environment, enabled, allow_private_network, adapter_type, base_url, api_spec_url,
+                       health_endpoint_path, auth_scheme, auth_header_name, timeout_seconds, request_defaults, operation_configs,
+                       response_mappings, auth_config, webhook_config, workflow_configs, secret_ciphertext,
+                       last_test_status, last_test_operation
+                from partner_integrations
+                where provider_key=:provider_key and environment='production' and enabled=true
+                limit 1
+            """),
+            {"provider_key": provider_key},
+        )
+    ).mappings().first()
+    if not row:
+        return None
+    secrets_map = {}
+    if row["secret_ciphertext"]:
+        secrets_map = json.loads(SecretCipher(get_settings().secrets_encryption_key).decrypt(row["secret_ciphertext"]))
+    return _build(dict(row), secrets_map)
+
+
 async def test_partner(config: PartnerIntegration, operation: str | None = None) -> dict[str, Any]:
     validate_endpoint(config.base_url, config.allow_private_network)
     if not operation:
