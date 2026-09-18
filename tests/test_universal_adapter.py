@@ -84,3 +84,34 @@ async def test_soap_xml_adapter():
     )
     assert route.called
     assert result.data["xml_root"]["Body"]["Result"]["Status"] == "OK"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_oauth2_client_credentials_adapter():
+    token_route = respx.post("https://auth.example/token").mock(
+        return_value=httpx.Response(200, json={"access_token": "access-123", "expires_in": 300})
+    )
+    api_route = respx.post("https://partner.example/demo").mock(
+        return_value=httpx.Response(200, json={"accepted": True})
+    )
+    context = ctx(
+        auth_scheme="oauth2_client_credentials",
+        auth_config={"token_url": "https://auth.example/token", "client_id": "client-1", "scope": "payments"},
+        secrets={"client_secret": "secret"},
+    )
+    result = await RestJsonAdapter().execute(context, {"amount": 5})
+    assert token_route.called
+    assert api_route.called
+    assert api_route.calls[0].request.headers["Authorization"] == "Bearer access-123"
+    assert result.data["accepted"] is True
+
+
+@pytest.mark.asyncio
+async def test_template_nested_values():
+    from app.services.template_engine import render
+    value = render({"id": "{{payload.customer_id}}", "quote": "{{steps.quote.id}}"}, {
+        "payload": {"customer_id": "c1"},
+        "steps": {"quote": {"id": "q1"}},
+    })
+    assert value == {"id": "c1", "quote": "q1"}
