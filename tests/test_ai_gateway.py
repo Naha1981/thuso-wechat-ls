@@ -6,6 +6,7 @@ from app.ai import gateway
 from app.ai.contracts import AIMessage, AIRequest
 from app.services import econet_integration as integration
 
+
 @pytest.fixture
 def demo_settings():
     return SimpleNamespace(ai_provider="demo", ai_provider_name="partner-ai", ai_base_url="", ai_api_key="", ai_model="default", ai_timeout_seconds=60)
