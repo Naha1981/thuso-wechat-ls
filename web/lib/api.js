@@ -38,6 +38,7 @@ export async function api(path, options = {}) {
         body: options.body ? JSON.parse(options.body) : undefined,
         headers,
         idempotencyKey: options.idempotencyKey,
+        sessionToken: token,
       });
       return {_queued: true, _offline: true};
     }
@@ -67,6 +68,7 @@ export async function api(path, options = {}) {
         body: options.body ? JSON.parse(options.body) : undefined,
         headers,
         idempotencyKey: options.idempotencyKey,
+        sessionToken: token,
       });
       return {_queued: true, _offline: true};
     }
