@@ -25,6 +25,9 @@ test = ["pytest>=8,<9", "pytest-asyncio>=1,<2", "respx>=0.22,<1", "ruff>=0.12,<1
 line-length = 100
 target-version = "py312"
 
+[tool.ruff.lint]
+ignore = ["B008"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 
