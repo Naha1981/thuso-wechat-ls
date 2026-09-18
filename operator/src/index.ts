@@ -27,7 +27,7 @@ async function loadAuth(accountId:string){
 async function signedPost(url:string, body:Buffer|string, contentType:string, extra:Record<string,string>={}):Promise<any>{
  const raw=typeof body==='string'?Buffer.from(body):body
  const sig=crypto.createHmac('sha256',env.webhookSecret).update(raw).digest('hex')
- const r=await fetch(url,{method:'POST',headers:{'content-type':contentType,'x-webhook-signature':sig,...extra},body:raw})
+ const r=await fetch(url,{method:'POST',headers:{'content-type':contentType,'x-webhook-signature':sig,...extra},body:typeof body==='string'?body:new Uint8Array(body)})
  const text=await r.text(); let parsed:any={}; try{parsed=JSON.parse(text)}catch{}
  if(!r.ok)throw Object.assign(new Error(`main endpoint ${r.status}: ${text.slice(0,300)}`),{status:r.status})
  return parsed
