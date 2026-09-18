@@ -35,7 +35,7 @@ class Intent:
 PATTERNS = {
     IntentName.DIASPORA: r'\b(send.*(groceries|food|shopping)|feed.*family|family.*back home|diaspora|send.*home)\b',
     IntentName.GROCERIES: r'\b(grocer(y|ies)|grocery|groceries|shoprite|checkers|pick n pay|vegetables|weekly shop)\b',
-    IntentName.FOOD: r'\b(ride|taxi|uber|lift|driver|transport|pick me up)\b',
+    IntentName.RIDE: r'\b(ride|taxi|uber|lift|driver|transport|pick me up)\b',
     IntentName.MECHANIC: r'\b(mechanic|car.*(broken|repair)|puncture|flat tyre|battery|tow)\b',
     IntentName.HANDYMAN: r'\b(handyman|plumber|electrician|carpenter|repair.*house|fix.*house)\b',
     IntentName.FOOD: r'\b(food|restaurant|hungry|order.*food|takeaway)\b',
