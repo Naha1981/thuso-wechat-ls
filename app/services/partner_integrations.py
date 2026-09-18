@@ -18,7 +18,7 @@ from app.core.config import get_settings
 from app.core.crypto import SecretCipher
 from app.integrations.universal_adapter import AdapterContext, adapter_for
 
-SECRET_FIELDS = {"api_key", "api_secret", "extra_headers", "hmac_secret", "client_secret", "client_cert_pem", "client_key_pem"}
+SECRET_FIELDS = {"api_key", "api_secret", "extra_headers", "hmac_secret", "client_secret", "client_cert_pem", "client_key_pem", "ca_bundle_pem"}
 
 
 @dataclass(frozen=True)
