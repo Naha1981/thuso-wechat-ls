@@ -18,7 +18,7 @@ export default function Home() {
   async function load() {
     setBusy(true); setMessage('');
     try {
-      const [food, loc] = await Promise.all([api('/food/feed'), api('/food/location')]);
+      const [food, loc] = await Promise.all([api('/food/feed', {offlineCache:true}), api('/food/location')]);
       setFeed(food.merchants || []); setLocation(loc.location || null);
     } catch (e) { setMessage(e.message); }
     finally { setBusy(false); }

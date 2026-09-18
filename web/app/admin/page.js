@@ -44,6 +44,10 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [partnerName, setPartnerName] = useState('');
+  const [partnerType, setPartnerType] = useState('government');
+  const [partnerDomain, setPartnerDomain] = useState('government');
+  const [inviteResult, setInviteResult] = useState(null);
 
   async function refresh() {
     setChecking(true);
@@ -179,6 +183,28 @@ export default function AdminPage() {
     }
   }
 
+
+  async function createPartnerInvite() {
+    setBusy(true); setError(''); setMessage(''); setInviteResult(null);
+    try {
+      const result = await adminApi('/partner-invites', {
+        method: 'POST',
+        body: JSON.stringify({
+          stakeholder_name: partnerName,
+          stakeholder_type: partnerType,
+          service_domain: partnerDomain,
+          expires_hours: 24,
+        }),
+      });
+      setInviteResult(result);
+      setMessage('Secure onboarding link created. Send it to the stakeholder.');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function logout() {
     try { await adminApi('/auth/logout', {method:'POST'}); } catch (_) {}
     clearAdminCsrf();
@@ -232,6 +258,18 @@ export default function AdminPage() {
 
     {message && <div className="adminNotice">{message}</div>}
     {error && <div className="adminError">{error}</div>}
+
+
+    <section className="adminCard" style={{marginTop:16}}>
+      <div className="cardHead"><div><h2>Self-service stakeholder onboarding</h2><p>Create a one-time secure onboarding link. The stakeholder configures, tests and activates its own API.</p></div></div>
+      <div className="formGrid">
+        <label>Organisation<input value={partnerName} onChange={e=>setPartnerName(e.target.value)} placeholder="Ministry of Health / Bank / Retailer" /></label>
+        <label>Stakeholder type<select value={partnerType} onChange={e=>setPartnerType(e.target.value)}><option value="government">Government</option><option value="bank">Bank / lender</option><option value="retailer">Retailer</option><option value="transport">Transport</option><option value="health">Health</option><option value="education">Education</option><option value="telecom">Telecom</option><option value="enterprise">Enterprise</option></select></label>
+        <label>Service domain<input value={partnerDomain} onChange={e=>setPartnerDomain(e.target.value)} placeholder="health, payments, transport..." /></label>
+      </div>
+      <div className="actionRow" style={{marginTop:12}}><button className="primaryBtn" onClick={createPartnerInvite} disabled={busy || partnerName.length < 2 || partnerDomain.length < 2}>Create secure onboarding link</button></div>
+      {inviteResult && <div className="adminNotice" style={{marginTop:12}}><strong>Onboarding token:</strong> <code>{inviteResult.onboarding_token}</code><br/><span>Open:</span> <code>{inviteResult.onboarding_path}#token={inviteResult.onboarding_token}</code><br/><small>Send this securely to the stakeholder. It expires at {String(inviteResult.expires_at)}.</small></div>}
+    </section>
 
     <section className="adminGrid">
       <div className="adminCard">

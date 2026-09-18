@@ -35,7 +35,8 @@ MODULES: tuple[NahaOSModule, ...] = (
     NahaOSModule("financial_literacy", "Financial Literacy", "WhatsApp-first lessons and personalised money guidance.", "wired", ("micro_lessons", "budgeting", "profit_explanations", "coaching")),
     NahaOSModule("aegisgrid", "AegisGrid Intelligence", "Risk, fraud, anomaly and decision-support signals across the platform.", "wired", ("fraud_detection", "risk_scoring", "anomaly_detection", "credit_signals")),
     NahaOSModule("ai", "AI Gateway", "The orchestration layer that understands requests and selects safe tools/services.", "live_foundation", ("chat", "routing", "tool_selection", "traceability")),
-    NahaOSModule("integration_hub", "Integration Hub", "Adapters for government, enterprise, telecom, commerce, payments and AI providers.", "live_foundation", ("provider_adapters", "configuration", "health_checks", "audit")),
+    NahaOSModule("integration_hub", "Integration Hub", "Self-service API onboarding for government, enterprise, telecom, commerce, payments, transport, health and AI providers.", "live_foundation", ("self_service_onboarding", "openapi_discovery", "encrypted_secrets", "health_checks", "test_then_activate", "provider_adapters", "audit")),
+
 )
 
 def list_modules() -> list[dict]:

@@ -2,7 +2,7 @@
 
 > **Ask THUSO. Get it done.**
 
-**Current release: v2.19.0 — NahaOS production integration control plane**
+**Current release: v2.20.0 — NahaOS universal partner adapter runtime + offline foundation**
 
 THUSO is evolving from a WhatsApp-first consumer platform into a Lesotho digital-services and AI orchestration platform. Existing identity, commerce, payment, merchant, dispatch, delivery, media and agent primitives remain the transactional foundation.
 
@@ -93,3 +93,34 @@ The intended user experience is conversational:
 `order food` → `request a ride` → `send groceries to family` → `buy airtime` → `check a loan workflow` → `file a tax/service request`.
 
 NahaOS decides which safe workflow and service adapter to invoke. External providers remain behind integration boundaries and must be supplied with approved contracts/credentials before production execution is enabled.
+
+
+## Stakeholder self-onboarding
+
+NahaOS now has a generic Partner Integration Hub. A platform administrator creates a short-lived secure onboarding link for a stakeholder. The stakeholder opens the link and can:
+
+1. enter its API base URL and credentials;
+2. optionally import an OpenAPI JSON document to discover operations;
+3. map request/response fields;
+4. run a live connectivity test;
+5. activate production.
+
+Changing a contract automatically disables the live integration until the new configuration passes a fresh test. Secrets are encrypted server-side. External integrations remain configuration-driven; provider-specific API changes do not require NahaLabs source-code changes.
+
+## Rural + low-connectivity operation
+
+NahaOS is designed for unreliable connectivity:
+
+- Web is installable as a lightweight PWA shell.
+- Frequently visited pages can be cached locally.
+- An IndexedDB outbox can store approved, idempotent requests while offline and retry them when connectivity returns.
+- The user sees a clear online/offline state and queued-work count.
+- WhatsApp and USSD remain channel options for people who cannot use the web app reliably.
+- Critical financial, identity and other consequential actions are never silently treated as completed while offline; they remain queued/pending until the server confirms execution.
+
+Offline mode is therefore **store-and-forward**, not fake disconnected execution.
+
+
+## Universal stakeholder adapters
+
+NahaOS does not require every partner to reshape its backend into a NahaOS-specific API. The Partner Integration Hub supports built-in adapters for REST/JSON, GraphQL, form-encoded HTTP, SOAP/XML and SFTP/file exchange, with OAuth2 client credentials, API keys, bearer auth, Basic auth, HMAC signing, mTLS, verified webhooks and configurable multi-step workflows. New protocol adapters can be registered behind the same AdapterRegistry without changing citizen-facing workflows.
