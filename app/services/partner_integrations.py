@@ -252,33 +252,60 @@ async def execute_workflow(
     if not isinstance(workflow, list) or not workflow:
         raise RuntimeError(f"Partner workflow not configured: {workflow_name}")
 
-    context: dict[str, Any] = {"payload": payload}
     results: dict[str, Any] = {}
-    for step in workflow:
-        if not isinstance(step, dict):
-            raise RuntimeError("Partner workflow step must be an object")
-        operation = step.get("operation")
-        if not operation:
-            raise RuntimeError("Partner workflow step requires an operation")
-        step_payload = render(step.get("payload_template") or "{{payload}}", {
-            "payload": context.get("payload", payload),
-            "steps": results,
-            "trace_id": trace_id,
-        })
-        if not isinstance(step_payload, dict):
-            raise RuntimeError(f"Workflow step {operation} payload must be an object")
-        result, _ = await execute_partner(
-            config,
-            operation=str(operation),
-            trace_id=trace_id,
-            payload=step_payload,
-        )
-        name = str(step.get("store_as") or operation)
-        results[name] = result
-        context["previous"] = result
+    completed_steps: list[tuple[dict[str, Any], dict[str, Any]]] = []
+
+    try:
+        for step in workflow:
+            if not isinstance(step, dict):
+                raise RuntimeError("Partner workflow step must be an object")
+            operation = step.get("operation")
+            if not operation:
+                raise RuntimeError("Partner workflow step requires an operation")
+
+            step_payload = render(step.get("payload_template") or "{{payload}}", {
+                "payload": payload,
+                "steps": results,
+                "trace_id": trace_id,
+            })
+            if not isinstance(step_payload, dict):
+                raise RuntimeError(f"Workflow step {operation} payload must be an object")
+
+            result, _ = await execute_partner(
+                config,
+                operation=str(operation),
+                trace_id=trace_id,
+                payload=step_payload,
+            )
+            name = str(step.get("store_as") or operation)
+            results[name] = result
+            completed_steps.append((step, result))
+    except Exception:
+        for step, previous_result in reversed(completed_steps):
+            compensation = step.get("compensation_operation")
+            if not compensation:
+                continue
+            compensation_payload = render(step.get("compensation_payload_template") or "{{previous}}", {
+                "payload": payload,
+                "previous": previous_result,
+                "steps": results,
+                "trace_id": trace_id,
+            })
+            if not isinstance(compensation_payload, dict):
+                continue
+            try:
+                await execute_partner(
+                    config,
+                    operation=str(compensation),
+                    trace_id=trace_id,
+                    payload=compensation_payload,
+                )
+            except Exception:
+                # Compensation is best-effort and the original workflow error remains authoritative.
+                pass
+        raise
 
     return {"workflow": workflow_name, "steps": results}, True
-
 
 async def discover_openapi(spec_url: str) -> dict[str, Any]:
     validate_endpoint(spec_url, False)
