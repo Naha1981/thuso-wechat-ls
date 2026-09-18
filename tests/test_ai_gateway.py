@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 import pytest
 import app.ai.gateway as gateway
+import app.services.econet_integration as integration
 from app.ai.contracts import AIMessage, AIRequest
 
 @pytest.fixture
@@ -19,7 +20,7 @@ async def test_demo_provider_returns_traceable_response(monkeypatch, demo_settin
     monkeypatch.setattr(gateway, "get_settings", lambda: demo_settings)
     response = await gateway.get_ai_provider().chat(AIRequest(messages=[AIMessage(role="user", content="What services can I use?")], trace_id="test-trace"))
     assert response.provider == "demo"
-    assert "THUSO demo AI received" in response.content
+    assert "NahaOS Sandbox AI received" in response.content
 
 @pytest.mark.asyncio
 async def test_econet_provider_maps_nahaos_contract(monkeypatch):
@@ -32,6 +33,7 @@ async def test_econet_provider_maps_nahaos_contract(monkeypatch):
         econet_ai_timeout_seconds=10,
     )
     monkeypatch.setattr(gateway, "get_settings", lambda: settings)
+    monkeypatch.setattr(integration, "_validate_endpoint", lambda *args, **kwargs: None)
 
     import httpx
     from respx import MockRouter
