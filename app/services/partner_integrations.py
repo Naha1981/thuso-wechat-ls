@@ -19,7 +19,7 @@ from app.core.crypto import SecretCipher
 from app.integrations.universal_adapter import AdapterContext, adapter_for
 from app.services.template_engine import json_path, render
 
-SECRET_FIELDS = {"api_key", "api_secret", "extra_headers", "hmac_secret", "client_secret", "client_cert_pem", "client_key_pem", "ca_bundle_pem"}
+SECRET_FIELDS = {"api_key", "api_secret", "extra_headers", "hmac_secret", "client_secret", "client_cert_pem", "client_key_pem", "ca_bundle_pem", "sftp_username", "sftp_password", "sftp_private_key_pem", "sftp_known_hosts"}
 
 
 @dataclass(frozen=True)
