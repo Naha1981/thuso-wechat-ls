@@ -225,3 +225,35 @@ async def execute_partner(config: PartnerIntegration, *, operation: str, trace_i
     mapping = config.response_mappings.get(operation) or definition.get("response_mapping") or {}
     mapped = {key: json_path(data, path_value) for key, path_value in mapping.items()} if mapping else data
     return mapped, True
+
+
+async def discover_openapi(spec_url: str) -> dict[str, Any]:
+    validate_endpoint(spec_url, False)
+    async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
+        response = await client.get(spec_url, headers={"Accept": "application/json, application/yaml, text/yaml"})
+    if response.status_code >= 400:
+        raise RuntimeError(f"OpenAPI document returned HTTP {response.status_code}")
+    try:
+        document = response.json()
+    except ValueError as exc:
+        raise RuntimeError("OpenAPI document must be JSON for automatic discovery") from exc
+    operations = {}
+    for path, methods in (document.get("paths") or {}).items():
+        if not isinstance(methods, dict):
+            continue
+        for method, definition in methods.items():
+            if method.lower() not in {"get", "post", "put", "patch", "delete"} or not isinstance(definition, dict):
+                continue
+            operation_id = definition.get("operationId") or f"{method.lower()}_{path.strip('/').replace('/', '_') or 'root'}"
+            operations[str(operation_id)] = {
+                "method": method.upper(),
+                "path": path,
+                "summary": definition.get("summary") or definition.get("description") or "",
+                "request_template": {},
+                "response_mapping": {},
+            }
+    return {
+        "title": (document.get("info") or {}).get("title"),
+        "version": (document.get("info") or {}).get("version"),
+        "operations": operations,
+    }
