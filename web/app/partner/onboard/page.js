@@ -121,7 +121,7 @@ export default function PartnerOnboardPage() {
   async function test() {
     setBusy(true); setError(''); setMessage('');
     try {
-      const data = await call('/partner/integration/test', token, {method:'POST', body:'{}'});
+      const data = await call('/partner/integration/test', token, {method:'POST', body: JSON.stringify({operation: testOperation || null})});
       setMessage('Connection test passed (' + data.kind + ').');
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
