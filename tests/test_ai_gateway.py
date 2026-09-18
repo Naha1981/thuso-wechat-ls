@@ -1,8 +1,10 @@
 from types import SimpleNamespace
+
 import pytest
-import app.ai.gateway as gateway
-import app.services.econet_integration as integration
+
+from app.ai import gateway
 from app.ai.contracts import AIMessage, AIRequest
+from app.services import econet_integration as integration
 
 @pytest.fixture
 def demo_settings():
