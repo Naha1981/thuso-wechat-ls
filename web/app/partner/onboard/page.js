@@ -19,10 +19,11 @@ async function call(path, token, options = {}) {
 }
 
 const empty = {
-  provider_key: '', base_url: '', api_spec_url: '', health_endpoint_path: '/health',
-  auth_scheme: 'bearer', auth_header_name: 'Authorization', timeout_seconds: 30,
-  api_key: '', api_secret: '', extra_headers: '{}', allow_private_network: false,
+  provider_key: '', base_url: '', adapter_type: 'rest_json', api_spec_url: '', health_endpoint_path: '/health',
+  auth_scheme: 'bearer', auth_header_name: 'Authorization', auth_config: '{}', timeout_seconds: 30,
+  api_key: '', api_secret: '', hmac_secret: '', client_secret: '', client_cert_pem: '', client_key_pem: '', ca_bundle_pem: '', extra_headers: '{}', allow_private_network: false,
   request_defaults: '{}', operation_configs: '{}', response_mappings: '{}',
+  webhook_config: '{}', workflow_configs: '{}',
 };
 
 export default function PartnerOnboardPage() {
@@ -58,7 +59,15 @@ export default function PartnerOnboardPage() {
             ...data.integration,
             api_key: '',
             api_secret: '',
+            hmac_secret: '',
+            client_secret: '',
+            client_cert_pem: '',
+            client_key_pem: '',
+            ca_bundle_pem: '',
             extra_headers: '{}',
+            auth_config: JSON.stringify(data.integration.auth_config || {}, null, 2),
+            webhook_config: JSON.stringify(data.integration.webhook_config || {}, null, 2),
+            workflow_configs: JSON.stringify(data.integration.workflow_configs || {}, null, 2),
             operation_configs: JSON.stringify(data.integration.operation_configs || {}, null, 2),
             request_defaults: JSON.stringify(data.integration.request_defaults || {}, null, 2),
             response_mappings: JSON.stringify(data.integration.response_mappings || {}, null, 2),
@@ -79,13 +88,16 @@ export default function PartnerOnboardPage() {
         ...form,
         timeout_seconds: Number(form.timeout_seconds),
         extra_headers: JSON.parse(form.extra_headers || '{}'),
+        auth_config: JSON.parse(form.auth_config || '{}'),
         request_defaults: JSON.parse(form.request_defaults || '{}'),
         operation_configs: JSON.parse(form.operation_configs || '{}'),
         response_mappings: JSON.parse(form.response_mappings || '{}'),
+        webhook_config: JSON.parse(form.webhook_config || '{}'),
+        workflow_configs: JSON.parse(form.workflow_configs || '{}'),
       };
       const data = await call('/partner/integration', token, {method:'PUT', body: JSON.stringify(body)});
       setMessage('Saved. Next: test the connection.');
-      setForm(f => ({...f, ...data, api_key: '', api_secret: ''}));
+      setForm(f => ({...f, ...data, api_key: '', api_secret: '', hmac_secret: '', client_secret: '', client_cert_pem: '', client_key_pem: '', ca_bundle_pem: ''}));
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   }
@@ -138,12 +150,20 @@ export default function PartnerOnboardPage() {
       <div className="formGrid">
         <label>Provider key<input value={form.provider_key} onChange={e=>update('provider_key',e.target.value)} placeholder="e.g. ministry-health-v1" /></label>
         <label>Base URL<input value={form.base_url} onChange={e=>update('base_url',e.target.value)} placeholder="https://api.example.org" /></label>
+        <label>Protocol adapter<select value={form.adapter_type} onChange={e=>update('adapter_type',e.target.value)}>
+          <option value="rest_json">REST / JSON</option><option value="graphql">GraphQL</option><option value="form_urlencoded">Form / legacy HTTP</option><option value="soap_xml">SOAP / XML</option>
+        </select></label>
         <label>OpenAPI URL (optional)<input value={form.api_spec_url || ''} onChange={e=>update('api_spec_url',e.target.value)} placeholder="https://api.example.org/openapi.json" /></label>
         <label>Health endpoint<input value={form.health_endpoint_path || ''} onChange={e=>update('health_endpoint_path',e.target.value)} placeholder="/health" /></label>
-        <label>Authentication<select value={form.auth_scheme} onChange={e=>update('auth_scheme',e.target.value)}><option value="bearer">Bearer token</option><option value="api-key">API key</option><option value="basic">Basic</option><option value="custom">Custom headers</option><option value="none">None</option></select></label>
+        <label>Authentication<select value={form.auth_scheme} onChange={e=>update('auth_scheme',e.target.value)}><option value="bearer">Bearer token</option><option value="api-key">API key</option><option value="basic">Basic</option><option value="oauth2_client_credentials">OAuth2 client credentials</option><option value="hmac_sha256">HMAC-SHA256 signing</option><option value="mtls">mTLS certificates</option><option value="custom">Custom headers</option><option value="none">None</option></select></label>
         <label>API header<input value={form.auth_header_name} onChange={e=>update('auth_header_name',e.target.value)} /></label>
         <label>API key / username<input type="password" value={form.api_key} onChange={e=>update('api_key',e.target.value)} placeholder="Stored encrypted" /></label>
         {form.auth_scheme === 'basic' && <label>Password / secret<input type="password" value={form.api_secret} onChange={e=>update('api_secret',e.target.value)} /></label>}
+        {form.auth_scheme === 'oauth2_client_credentials' && <label>OAuth2 client secret<input type="password" value={form.client_secret} onChange={e=>update('client_secret',e.target.value)} /></label>}
+        {form.auth_scheme === 'hmac_sha256' && <label>HMAC secret<input type="password" value={form.hmac_secret} onChange={e=>update('hmac_secret',e.target.value)} /></label>}
+        {form.auth_scheme === 'mtls' && <label className="wide">Client certificate PEM<textarea rows="5" value={form.client_cert_pem} onChange={e=>update('client_cert_pem',e.target.value)} /></label>}
+        {form.auth_scheme === 'mtls' && <label className="wide">Client private key PEM<textarea rows="5" value={form.client_key_pem} onChange={e=>update('client_key_pem',e.target.value)} /></label>}
+        {form.auth_scheme === 'mtls' && <label className="wide">CA bundle PEM (optional)<textarea rows="4" value={form.ca_bundle_pem} onChange={e=>update('ca_bundle_pem',e.target.value)} /></label>}
         {form.auth_scheme === 'custom' && <label className="wide">Secret headers JSON<textarea rows="3" value={form.extra_headers} onChange={e=>update('extra_headers',e.target.value)} /></label>}
         <label>Timeout (seconds)<input type="number" min="5" max="180" value={form.timeout_seconds} onChange={e=>update('timeout_seconds',e.target.value)} /></label>
       </div>
@@ -158,6 +178,9 @@ export default function PartnerOnboardPage() {
       </select></label>
       <label>Request defaults<textarea rows="5" spellCheck="false" value={form.request_defaults} onChange={e=>update('request_defaults',e.target.value)} /></label>
       <label>Response mappings<textarea rows="6" spellCheck="false" value={form.response_mappings} onChange={e=>update('response_mappings',e.target.value)} /></label>
+      <label>Advanced auth configuration<textarea rows="5" spellCheck="false" value={form.auth_config} onChange={e=>update('auth_config',e.target.value)} /></label>
+      <label>Webhook verification configuration<textarea rows="5" spellCheck="false" value={form.webhook_config} onChange={e=>update('webhook_config',e.target.value)} /></label>
+      <label>Multi-step workflows<textarea rows="8" spellCheck="false" value={form.workflow_configs} onChange={e=>update('workflow_configs',e.target.value)} placeholder={'{"application_submit":[{"operation":"validate"},{"operation":"submit"}]'} /></label>
     </section>
 
     <section className="adminCard actionCard" style={{marginTop:16}}>
