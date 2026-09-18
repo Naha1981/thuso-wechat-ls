@@ -16,6 +16,7 @@ from app.services.partner_integrations import (
     SECRET_FIELDS,
     hash_token,
     test_partner,
+    discover_openapi,
     validate_endpoint,
     normalise_path,
     _build,
@@ -230,6 +231,23 @@ async def save(
     await db.commit()
     config, secrets_map = await _saved(db, str(invite["id"]))
     return _public(config, secrets_map)
+
+
+class DiscoverIn(BaseModel):
+    openapi_url: str = Field(min_length=8, max_length=2000)
+
+
+@router.post("/discover")
+async def discover(
+    body: DiscoverIn,
+    x_nahaos_onboarding_token: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    await _invite(db, x_nahaos_onboarding_token)
+    try:
+        return await discover_openapi(body.openapi_url)
+    except Exception as exc:
+        raise HTTPException(422, "Could not read the OpenAPI document") from exc
 
 
 @router.post("/integration/test")
