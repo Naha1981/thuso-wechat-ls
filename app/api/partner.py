@@ -28,10 +28,12 @@ router = APIRouter(prefix="/partner", tags=["partner-onboarding"])
 class IntegrationIn(BaseModel):
     provider_key: str = Field(min_length=3, max_length=120)
     base_url: str = Field(min_length=8, max_length=2000)
+    adapter_type: str = "rest_json"
     api_spec_url: str | None = None
     health_endpoint_path: str | None = "/health"
     auth_scheme: str = "bearer"
     auth_header_name: str = "Authorization"
+    auth_config: dict = Field(default_factory=dict)
     timeout_seconds: int = Field(default=30, ge=5, le=180)
     api_key: str | None = Field(default=None, max_length=10000)
     api_secret: str | None = Field(default=None, max_length=10000)
@@ -40,6 +42,8 @@ class IntegrationIn(BaseModel):
     request_defaults: dict = Field(default_factory=dict)
     operation_configs: dict = Field(default_factory=dict)
     response_mappings: dict = Field(default_factory=dict)
+    webhook_config: dict = Field(default_factory=dict)
+    workflow_configs: dict = Field(default_factory=dict)
 
 
 class TestRequest(BaseModel):
@@ -111,14 +115,18 @@ def _public(config, secrets_map):
         "environment": config.environment,
         "enabled": config.enabled,
         "base_url": config.base_url,
+        "adapter_type": config.adapter_type,
         "allow_private_network": config.allow_private_network,
         "api_spec_url": config.api_spec_url,
         "health_endpoint_path": config.health_endpoint_path,
         "auth_scheme": config.auth_scheme,
+        "auth_config": config.auth_config,
         "timeout_seconds": config.timeout_seconds,
         "request_defaults": config.request_defaults,
         "operation_configs": config.operation_configs,
         "response_mappings": config.response_mappings,
+        "webhook_config": config.webhook_config,
+        "workflow_configs": config.workflow_configs,
         "secret_configured": bool(secrets_map),
         "last_test_status": config.last_test_status,
         "last_test_operation": config.last_test_operation,
@@ -144,7 +152,9 @@ async def save(
     db: AsyncSession = Depends(get_db),
 ):
     invite = await _invite(db, x_nahaos_onboarding_token)
-    if body.auth_scheme not in {"bearer", "api-key", "basic", "custom", "none"}:
+    if body.adapter_type not in {"rest_json", "graphql", "form_urlencoded", "soap_xml"}:
+        raise HTTPException(422, "Unsupported adapter type")
+    if body.auth_scheme not in {"bearer", "api-key", "basic", "custom", "none", "oauth2_client_credentials", "hmac_sha256", "mtls"}:
         raise HTTPException(422, "Unsupported auth scheme")
     validate_endpoint(body.base_url, body.allow_private_network)
     normalise_path(body.health_endpoint_path, None)
@@ -176,12 +186,16 @@ async def save(
     values = {
         "provider_key": body.provider_key,
         "base_url": body.base_url.rstrip("/"),
+        "adapter_type": body.adapter_type,
         "api_spec_url": body.api_spec_url,
         "health_endpoint_path": normalise_path(body.health_endpoint_path, None),
         "auth_scheme": body.auth_scheme,
         "auth_header_name": body.auth_header_name,
+        "auth_config": json.dumps(body.auth_config),
         "timeout_seconds": body.timeout_seconds,
         "allow_private_network": body.allow_private_network,
+        "webhook_config": json.dumps(body.webhook_config),
+        "workflow_configs": json.dumps(body.workflow_configs),
         "request_defaults": json.dumps(body.request_defaults),
         "operation_configs": json.dumps(body.operation_configs),
         "response_mappings": json.dumps(body.response_mappings),
@@ -196,13 +210,16 @@ async def save(
     if current:
         await db.execute(text("""
             update partner_integrations set
-              provider_key=:provider_key, enabled=false, base_url=:base_url,
+              provider_key=:provider_key, adapter_type=:adapter_type, enabled=false, base_url=:base_url,
               api_spec_url=:api_spec_url, health_endpoint_path=:health_endpoint_path,
               auth_scheme=:auth_scheme, auth_header_name=:auth_header_name,
+              auth_config=cast(:auth_config as jsonb),
               timeout_seconds=:timeout_seconds, allow_private_network=:allow_private_network,
               request_defaults=cast(:request_defaults as jsonb),
               operation_configs=cast(:operation_configs as jsonb),
               response_mappings=cast(:response_mappings as jsonb),
+              webhook_config=cast(:webhook_config as jsonb),
+              workflow_configs=cast(:workflow_configs as jsonb),
               secret_ciphertext=:secret_ciphertext, last_test_at=null,
               last_test_status=null, last_test_operation=null, last_test_error=null,
               version=version+1, updated_at=now()
@@ -214,14 +231,15 @@ async def save(
             await db.execute(text("""
                 insert into partner_integrations(
                   partner_invite_id, stakeholder_name, stakeholder_type, service_domain,
-                  provider_key, environment, enabled, base_url, api_spec_url,
+                  provider_key, adapter_type, environment, enabled, base_url, api_spec_url,
                   health_endpoint_path, allow_private_network, auth_scheme, auth_header_name, timeout_seconds,
                   request_defaults, operation_configs, response_mappings, secret_ciphertext
                 ) values (
-                  :invite_id, :name, :type, :domain, :provider_key, 'production', false,
+                  :invite_id, :name, :type, :domain, :provider_key, :adapter_type, 'production', false,
                   :base_url, :api_spec_url, :health_endpoint_path, :allow_private_network, :auth_scheme,
                   :auth_header_name, :timeout_seconds, cast(:request_defaults as jsonb),
                   cast(:operation_configs as jsonb), cast(:response_mappings as jsonb),
+                  cast(:webhook_config as jsonb), cast(:workflow_configs as jsonb),
                   :secret_ciphertext
                 ) returning id
             """), {
